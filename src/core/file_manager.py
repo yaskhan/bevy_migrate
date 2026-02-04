@@ -123,6 +123,27 @@ class FileManager:
             self.logger.error(f"Error finding Cargo files: {e}", exc_info=True)
             return []
     
+    def find_cargo_toml(self) -> Optional[Path]:
+        """
+        Find Cargo.toml in the project root (case-insensitive)
+        
+        Returns:
+            Path to Cargo.toml or None if not found
+        """
+        try:
+            # Check case-insensitive using iterdir to get actual filename
+            if self.project_path.exists():
+                for file_path in self.project_path.iterdir():
+                    if file_path.is_file() and file_path.name.lower() == "cargo.toml":
+                        self.logger.debug(f"Found Cargo.toml: {file_path.name}")
+                        return file_path
+            
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Error finding Cargo.toml: {e}")
+            return None
+
     def find_config_files(self) -> List[Path]:
         """
         Find configuration files that might need migration

@@ -444,8 +444,8 @@ class Migration_0_16_to_0_17_Part2(BaseMigration):
         
         try:
             # Check that Part 1 was completed
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
                 # Should still be on 0.16 (Cargo.toml updated in Part 3)

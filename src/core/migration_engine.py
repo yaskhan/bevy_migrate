@@ -225,7 +225,7 @@ class MigrationEngine:
             
             # Copy important files
             files_to_backup = [
-                "Cargo.toml",
+                # "Cargo.toml",  # Handled separately
                 "Cargo.lock",
                 "src/",
                 "examples/",
@@ -233,6 +233,13 @@ class MigrationEngine:
                 "benches/",
                 "tests/"
             ]
+            
+            # Backup Cargo.toml (case-insensitive)
+            cargo_toml = self.file_manager.find_cargo_toml()
+            if cargo_toml:
+                dest_path = backup_path / cargo_toml.name
+                shutil.copy2(cargo_toml, dest_path)
+
             
             for file_pattern in files_to_backup:
                 source_path = self.project_path / file_pattern
@@ -257,8 +264,8 @@ class MigrationEngine:
     def _update_project_version(self, new_version: str) -> None:
         """Update the project's Bevy version in Cargo.toml"""
         try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if not cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if not cargo_toml_path:
                 self.logger.warning("Cargo.toml not found, cannot update version")
                 return
             
@@ -298,8 +305,8 @@ class MigrationEngine:
         """Validate that the project is a valid Bevy project"""
         try:
             # Check for Cargo.toml
-            cargo_toml = self.project_path / "Cargo.toml"
-            if not cargo_toml.exists():
+            cargo_toml = self.file_manager.find_cargo_toml()
+            if not cargo_toml:
                 self.logger.error("No Cargo.toml found in project")
                 return False
             

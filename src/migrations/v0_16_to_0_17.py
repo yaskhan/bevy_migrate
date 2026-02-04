@@ -315,8 +315,8 @@ class Migration_0_16_to_0_17(BaseMigration):
     def _update_cargo_dependencies(self) -> bool:
         """Update Cargo.toml to use Bevy 0.17"""
         try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if not cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if not cargo_toml_path:
                 self.logger.warning("Cargo.toml not found")
                 return False
             
@@ -480,8 +480,8 @@ class Migration_0_16_to_0_17(BaseMigration):
         
         try:
             # Check that we're actually migrating from 0.16
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
                 # Look for Bevy 0.16 dependency

@@ -78,6 +78,22 @@ class VersionDetector:
         
         self.logger.info("Version detector initialized")
     
+        self.logger.info("Version detector initialized")
+    
+    def _find_cargo_toml(self, path: Path) -> Optional[Path]:
+        """Find Cargo.toml in path (case-insensitive)"""
+        try:
+            if not path.is_dir():
+                return None
+            
+            # Check case-insensitive using iterdir to get actual filename
+            for f in path.iterdir():
+                if f.is_file() and f.name.lower() == "cargo.toml":
+                    return f
+            return None
+        except Exception:
+            return None
+
     def detect_version(self, project_path: Path) -> Optional[str]:
         """
         Detect the current Bevy version in a project
@@ -131,8 +147,8 @@ class VersionDetector:
     def _detect_from_cargo_toml(self, project_path: Path) -> Optional[VersionInfo]:
         """Detect version from Cargo.toml"""
         try:
-            cargo_toml_path = project_path / "Cargo.toml"
-            if not cargo_toml_path.exists():
+            cargo_toml_path = self._find_cargo_toml(project_path)
+            if not cargo_toml_path:
                 return None
             
             content = cargo_toml_path.read_text(encoding='utf-8')
@@ -256,8 +272,8 @@ class VersionDetector:
             # Check if we're in a workspace
             current_path = project_path
             while current_path != current_path.parent:
-                workspace_cargo = current_path / "Cargo.toml"
-                if workspace_cargo.exists():
+                workspace_cargo = self._find_cargo_toml(current_path)
+                if workspace_cargo:
                     content = workspace_cargo.read_text(encoding='utf-8')
                     if '[workspace]' in content:
                         # This is a workspace, check for bevy dependency
@@ -385,7 +401,7 @@ class VersionDetector:
             info["analysis_details"] = {
                 "total_sources_checked": 4,
                 "sources_with_results": len([s for s in info["sources"].values() if s]),
-                "cargo_toml_exists": (project_path / "Cargo.toml").exists(),
+                "cargo_toml_exists": self._find_cargo_toml(project_path) is not None,
                 "cargo_lock_exists": (project_path / "Cargo.lock").exists(),
                 "rust_files_found": len(list(project_path.glob("src/**/*.rs"))),
             }
@@ -466,8 +482,8 @@ class VersionDetector:
             }
             
             # Check for Cargo.toml
-            cargo_toml_path = project_path / "Cargo.toml"
-            validation["has_cargo_toml"] = cargo_toml_path.exists()
+            cargo_toml_path = self._find_cargo_toml(project_path)
+            validation["has_cargo_toml"] = cargo_toml_path is not None
             
             if validation["has_cargo_toml"]:
                 validation["is_rust_project"] = True

@@ -168,8 +168,8 @@ class BaseMigration(ABC):
                 return False
             
             # Check for Cargo.toml
-            cargo_toml = self.project_path / "Cargo.toml"
-            if not cargo_toml.exists():
+            cargo_toml = self.file_manager.find_cargo_toml()
+            if not cargo_toml:
                 self.logger.error("Cargo.toml not found in project")
                 return False
             

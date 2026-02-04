@@ -395,8 +395,8 @@ class Migration_0_16_to_0_17_Part1(BaseMigration):
             return False
         
         try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
                 if re.search(r'bevy\s*=\s*["\']0\.16', content):

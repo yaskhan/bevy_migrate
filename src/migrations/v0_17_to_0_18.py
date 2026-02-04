@@ -635,9 +635,9 @@ class Migration_0_17_to_0_18(BaseMigration):
         try:
             # Update Cargo.toml
             self.logger.info("Updating Cargo.toml to Bevy 0.18...")
-            cargo_toml_path = self.project_path / "Cargo.toml"
+            cargo_toml_path = self.file_manager.find_cargo_toml()
             
-            if cargo_toml_path.exists():
+            if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
                 # Update Bevy version
@@ -686,8 +686,8 @@ class Migration_0_17_to_0_18(BaseMigration):
             return False
         
         try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
                 if not re.search(r'bevy\s*=\s*["\']0\.17', content):

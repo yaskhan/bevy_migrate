@@ -826,8 +826,8 @@ class Migration_0_15_to_0_16(BaseMigration):
     def _update_cargo_toml(self) -> bool:
         """Update Cargo.toml to use Bevy 0.16 and Rust 2024"""
         try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if not cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if not cargo_toml_path:
                 self.logger.warning("Cargo.toml not found")
                 return False
             
@@ -906,8 +906,8 @@ class Migration_0_15_to_0_16(BaseMigration):
             return False
         
         try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if cargo_toml_path.exists():
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
                 if re.search(r'bevy\s*=\s*["\']0\.15', content):
