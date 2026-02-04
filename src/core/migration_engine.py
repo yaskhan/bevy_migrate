@@ -11,6 +11,7 @@ from datetime import datetime
 
 from migrations.base_migration import BaseMigration
 from migrations.v0_12_to_0_13 import Migration_0_12_to_0_13
+from migrations.v0_13_to_0_14 import Migration_0_13_to_0_14
 from migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
 from migrations.v0_16_to_0_17 import Migration_0_16_to_0_17
 from migrations.v0_17_to_0_18 import Migration_0_17_to_0_18
@@ -51,6 +52,7 @@ class MigrationEngine:
         # Registry of available migrations
         self._migration_registry: Dict[str, Type[BaseMigration]] = {
             "0.12->0.13": Migration_0_12_to_0_13,
+            "0.13->0.14": Migration_0_13_to_0_14,
             "0.15->0.16": Migration_0_15_to_0_16,
             "0.16->0.17": Migration_0_16_to_0_17,
             "0.17->0.18": Migration_0_17_to_0_18,
@@ -59,6 +61,7 @@ class MigrationEngine:
         # Version progression mapping
         self._version_progression = {
             "0.12": "0.13",
+            "0.13": "0.14",
             "0.15": "0.16",
             "0.16": "0.17",
             "0.17": "0.18"
@@ -119,7 +122,7 @@ class MigrationEngine:
     
     def _validate_versions(self, from_version: str, to_version: str) -> bool:
         """Validate that the version migration is supported"""
-        supported_versions = ["0.12", "0.13", "0.15", "0.16", "0.17", "0.18"]
+        supported_versions = ["0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"]
         
         if from_version not in supported_versions:
             self.logger.error(f"Unsupported source version: {from_version}")

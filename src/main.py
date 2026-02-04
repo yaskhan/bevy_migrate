@@ -50,7 +50,7 @@ Examples:
         '--target-version',
         type=str,
         default='0.18',
-        choices=['0.13', '0.16', '0.17', '0.18'],
+        choices=['0.13', '0.14', '0.16', '0.17', '0.18'],
         help='Target Bevy version to migrate to (default: 0.18)'
     )
     
@@ -147,7 +147,7 @@ def main() -> int:
             return 0
         
         # Validate version progression
-        version_order = ["0.12", "0.13", "0.15", "0.16", "0.17", "0.18"]
+        version_order = ["0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"]
         try:
             current_idx = version_order.index(current_version)
             target_idx = version_order.index(args.target_version)
