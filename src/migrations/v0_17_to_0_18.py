@@ -590,6 +590,63 @@ class Migration_0_17_to_0_18(BaseMigration):
             description="bevy_gizmos rendering split to bevy_gizmos_render"
         ))
         
+        # ===== STATE MANAGEMENT CHANGES (TODOMIGRATE) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="Res<State<$S>>",
+            replacement="State<$S>",
+            description="Res<State<S>> -> State<S>"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ResMut<NextState<$S>>",
+            replacement="NextState<$S>",
+            description="ResMut<NextState<S>> -> NextState<S>"
+        ))
+
+        # ===== EVENTS -> MESSAGES (Bevy Adventure) =====
+        
+        transformations.append(self.create_transformation(
+            pattern=".add_event::<$T>()",
+            replacement=".add_message::<$T>()",
+            description="App::add_event -> App::add_message"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="EventWriter<$T>",
+            replacement="MessageWriter<$T>",
+            description="EventWriter -> MessageWriter"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="EventReader<$T>",
+            replacement="MessageReader<$T>",
+            description="EventReader -> MessageReader"
+        ))
+
+        # ===== INPUT API CHANGES =====
+        
+        # Only replacing inside Res/ResMut to be safe as per TODOMIGRATE
+        transformations.append(self.create_transformation(
+            pattern="Res<Input<$T>>",
+            replacement="Res<ButtonInput<$T>>",
+            description="Res<Input<T>> -> Res<ButtonInput<T>>"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ResMut<Input<$T>>",
+            replacement="ResMut<ButtonInput<$T>>",
+            description="ResMut<Input<T>> -> ResMut<ButtonInput<T>>"
+        ))
+
+        # ===== ENTITY COMMANDS =====
+        
+        transformations.append(self.create_transformation(
+            pattern="$ENTITY.despawn_recursive()",
+            replacement="$ENTITY.despawn()",
+            description="despawn_recursive -> despawn"
+        ))
+
         return transformations
     
     def get_affected_patterns(self) -> List[str]:
@@ -672,7 +729,10 @@ class Migration_0_17_to_0_18(BaseMigration):
             self.logger.info("  - AnimationTarget: Split into AnimationTargetId + AnimatedBy")
             self.logger.info("  - AmbientLight: Split into GlobalAmbientLight + AmbientLight")
             self.logger.info("  - Mesh methods: Use try_* variants for RENDER_WORLD meshes")
-            self.logger.info("  - Entity::index(): Old method → index_u32()")
+            self.logger.info("  - Entity::index(): Old method -> index_u32()")
+            self.logger.info("  - Rapier Physics: Update raycast signatures (API changed)")
+            self.logger.info("  - Query::get_single_mut(): Returns Result now, check unwrap/handling")
+            self.logger.info("  - State SystemParam: Check for 'where S: FreelyMutableState' bounds")
             self.logger.info("=" * 60)
             
             return True
