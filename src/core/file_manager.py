@@ -484,7 +484,10 @@ class FileManager:
                     if content and pattern in content:
                         matching_files.append(file_path)
             
-            self.logger.info(f"Found {len(matching_files)} files containing pattern '{pattern}'")
+            if matching_files:
+                self.logger.info(f"Found {len(matching_files)} files containing pattern '{pattern}'")
+            else:
+                self.logger.debug(f"Found 0 files containing pattern '{pattern}'")
             return sorted(matching_files)
             
         except Exception as e:

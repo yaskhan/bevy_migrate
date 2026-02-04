@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Bevy Engine Migration Tool
-Main entry point for migrating Bevy projects from version 0.15 to 0.18
+Main entry point for migrating Bevy projects from version 0.12 to 0.18
 """
 
 import argparse
