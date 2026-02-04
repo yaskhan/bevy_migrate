@@ -759,8 +759,8 @@ class Migration_0_13_to_0_14(BaseMigration):
             
             # Update bevy dependency version
             patterns = [
-                (r'(bevy\s*=\s*")[^"]*(")' r'\g<1>0.14\g<2>'),
-                (r'(bevy\s*=\s*\{\s*version\s*=\s*")[^"]*(")' r'\g<1>0.14\g<2>'),
+                (r'(bevy\s*=\s*")[^"]*(")', r'\g<1>0.14\g<2>'),
+                (r'(bevy\s*=\s*\{\s*version\s*=\s*")[^"]*(")', r'\g<1>0.14\g<2>'),
             ]
             
             updated = False

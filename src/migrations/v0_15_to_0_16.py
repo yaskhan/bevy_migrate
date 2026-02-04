@@ -879,7 +879,7 @@ class Migration_0_15_to_0_16(BaseMigration):
                 ("PerspectiveProjection", "Projections no longer components - use Projection enum"),
                 ("TextureAtlas", "TextureAtlas moved to bevy_image - update imports"),
                 ("no_std", "Consider enabling no_std features if targeting embedded platforms"),
-                ("Volume(", "Volume is now an enum - use Volume::Linear or Volume::Decibels"),
+                ("Volume\\(", "Volume is now an enum - use Volume::Linear or Volume::Decibels"),
             ]
             
             rust_files = self.file_manager.find_rust_files()
