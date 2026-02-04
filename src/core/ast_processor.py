@@ -57,7 +57,7 @@ class ASTProcessor:
         self.logger = logging.getLogger(__name__)
         
         # Check if ast-grep is available
-        self._check_ast_grep_availability()
+        self.ast_grep_available = self._check_ast_grep_availability()
         
         self.logger.info(f"AST processor initialized for project: {project_path}")
         self.logger.info(f"Dry run mode: {dry_run}")
@@ -187,11 +187,11 @@ class ASTProcessor:
         content: str,
         transformation: ASTTransformation,
         file_path: Path
-    ) -> str:
+    ) -> Optional[str]:
         """Apply a single transformation to content"""
         try:
             # Try ast-grep first if available
-            if self._check_ast_grep_availability():
+            if self.ast_grep_available:
                 result = self._apply_ast_grep_transformation(content, transformation, file_path)
                 if result is not None:
                     return result
@@ -247,7 +247,7 @@ class ASTProcessor:
                         transformed_content = Path(temp_file_path).read_text(encoding='utf-8')
                         return transformed_content
                     else:
-                        self.logger.warning(f"ast-grep failed: {result.stderr}")
+                        self.logger.debug(f"ast-grep failed: {result.stderr}")
                         return None
                         
                 finally:
@@ -259,7 +259,7 @@ class ASTProcessor:
                 Path(temp_file_path).unlink(missing_ok=True)
                 
         except Exception as e:
-            self.logger.warning(f"ast-grep transformation failed: {e}")
+            self.logger.debug(f"ast-grep transformation failed: {e}")
             return None
     
     def _apply_regex_transformation(
