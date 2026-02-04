@@ -34,7 +34,7 @@ class Migration_0_14_to_0_15_Part2(BaseMigration):
     @property
     def from_version(self) -> str:
         """Source Bevy version for this migration"""
-        return "0.14"
+        return "0.15-part1"
     
     @property
     def to_version(self) -> str:
