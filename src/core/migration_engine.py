@@ -12,6 +12,8 @@ from datetime import datetime
 from migrations.base_migration import BaseMigration
 from migrations.v0_12_to_0_13 import Migration_0_12_to_0_13
 from migrations.v0_13_to_0_14 import Migration_0_13_to_0_14
+from migrations.v0_14_to_0_15_part1 import Migration_0_14_to_0_15_Part1
+from migrations.v0_14_to_0_15_part2 import Migration_0_14_to_0_15_Part2
 from migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
 from migrations.v0_16_to_0_17 import Migration_0_16_to_0_17
 from migrations.v0_17_to_0_18 import Migration_0_17_to_0_18
@@ -53,6 +55,8 @@ class MigrationEngine:
         self._migration_registry: Dict[str, Type[BaseMigration]] = {
             "0.12->0.13": Migration_0_12_to_0_13,
             "0.13->0.14": Migration_0_13_to_0_14,
+            "0.14->0.15-part1": Migration_0_14_to_0_15_Part1,
+            "0.14->0.15": Migration_0_14_to_0_15_Part2,
             "0.15->0.16": Migration_0_15_to_0_16,
             "0.16->0.17": Migration_0_16_to_0_17,
             "0.17->0.18": Migration_0_17_to_0_18,
@@ -62,6 +66,8 @@ class MigrationEngine:
         self._version_progression = {
             "0.12": "0.13",
             "0.13": "0.14",
+            "0.14": "0.15-part1",
+            "0.15-part1": "0.15",
             "0.15": "0.16",
             "0.16": "0.17",
             "0.17": "0.18"
