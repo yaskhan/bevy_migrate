@@ -29,7 +29,7 @@ def setup_logging(verbose: bool = False) -> None:
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description='Bevy Engine Migration Tool - Migrate from v0.15 to v0.18',
+        description='Bevy Engine Migration Tool - Migrate from v0.12 to v0.18',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -50,7 +50,7 @@ Examples:
         '--target-version',
         type=str,
         default='0.18',
-        choices=['0.16', '0.17', '0.18'],
+        choices=['0.13', '0.16', '0.17', '0.18'],
         help='Target Bevy version to migrate to (default: 0.18)'
     )
     
@@ -137,7 +137,7 @@ def main() -> int:
                 return 1
             else:
                 logger.warning("Could not detect current Bevy version, proceeding with --force")
-                current_version = "0.15"  # Assume oldest supported version
+                current_version = "0.12"  # Assume oldest supported version
         
         logger.info(f"Detected current Bevy version: {current_version}")
         
@@ -147,7 +147,7 @@ def main() -> int:
             return 0
         
         # Validate version progression
-        version_order = ["0.15", "0.16", "0.17", "0.18"]
+        version_order = ["0.12", "0.13", "0.15", "0.16", "0.17", "0.18"]
         try:
             current_idx = version_order.index(current_version)
             target_idx = version_order.index(args.target_version)
