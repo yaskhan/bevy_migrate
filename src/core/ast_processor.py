@@ -3,12 +3,15 @@ AST Processor - Core component for parsing and transforming Rust AST
 Handles AST-based code transformations for Bevy migrations using ast-grep
 """
 
+
 import logging
 import subprocess
 import json
 import tempfile
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
+
 from dataclasses import dataclass
 
 
@@ -189,10 +192,13 @@ class ASTProcessor:
         try:
             # Try ast-grep first if available
             if self._check_ast_grep_availability():
-                return self._apply_ast_grep_transformation(content, transformation, file_path)
-            else:
-                # Fallback to regex-based transformation
-                return self._apply_regex_transformation(content, transformation)
+                result = self._apply_ast_grep_transformation(content, transformation, file_path)
+                if result is not None:
+                    return result
+                # Fallback to regex if ast-grep failed
+            
+            # Fallback to regex-based transformation
+            return self._apply_regex_transformation(content, transformation)
         except Exception as e:
             self.logger.warning(f"AST transformation failed, falling back to regex: {e}")
             return self._apply_regex_transformation(content, transformation)
@@ -202,7 +208,7 @@ class ASTProcessor:
         content: str,
         transformation: ASTTransformation,
         file_path: Path
-    ) -> str:
+    ) -> Optional[str]:
         """Apply transformation using ast-grep"""
         try:
             # Create temporary files for ast-grep
@@ -213,10 +219,12 @@ class ASTProcessor:
             try:
                 # Create ast-grep rule file
                 rule = {
+                    "id": "migration-rule",
+                    "language": "rust",
                     "rule": {
-                        "pattern": transformation.pattern,
-                        "fix": transformation.replacement
-                    }
+                        "pattern": transformation.pattern
+                    },
+                    "fix": transformation.replacement
                 }
                 
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as rule_file:
@@ -230,7 +238,7 @@ class ASTProcessor:
                         "ast-grep",
                         "scan",
                         "--rule", rule_file_path,
-                        "--fix",
+                        "--update-all",
                         temp_file_path
                     ], capture_output=True, text=True, timeout=30)
                     
@@ -240,7 +248,7 @@ class ASTProcessor:
                         return transformed_content
                     else:
                         self.logger.warning(f"ast-grep failed: {result.stderr}")
-                        return content
+                        return None
                         
                 finally:
                     # Clean up rule file
@@ -252,7 +260,7 @@ class ASTProcessor:
                 
         except Exception as e:
             self.logger.warning(f"ast-grep transformation failed: {e}")
-            return content
+            return None
     
     def _apply_regex_transformation(
         self,
