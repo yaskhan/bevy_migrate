@@ -310,10 +310,11 @@ class MigrationEngine:
                 self.logger.error("No Cargo.toml found in project")
                 return False
             
-            # Check for src directory
-            src_dir = self.project_path / "src"
-            if not src_dir.exists():
-                self.logger.error("No src directory found in project")
+            # Check for Rust files instead of strict src directory
+            # Projects might use custom source directories defined in Cargo.toml
+            rust_files = self.file_manager.find_rust_files()
+            if not rust_files:
+                self.logger.error("No Rust files found in project")
                 return False
             
             # Try to detect if Bevy is used
