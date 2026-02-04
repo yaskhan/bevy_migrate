@@ -15,7 +15,9 @@ from migrations.v0_13_to_0_14 import Migration_0_13_to_0_14
 from migrations.v0_14_to_0_15_part1 import Migration_0_14_to_0_15_Part1
 from migrations.v0_14_to_0_15_part2 import Migration_0_14_to_0_15_Part2
 from migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
-from migrations.v0_16_to_0_17 import Migration_0_16_to_0_17
+from migrations.v0_16_to_0_17_part1 import Migration_0_16_to_0_17_Part1
+from migrations.v0_16_to_0_17_part2 import Migration_0_16_to_0_17_Part2
+from migrations.v0_16_to_0_17_part3 import Migration_0_16_to_0_17_Part3
 from migrations.v0_17_to_0_18 import Migration_0_17_to_0_18
 from core.file_manager import FileManager
 from utils.version_detector import VersionDetector
@@ -58,7 +60,9 @@ class MigrationEngine:
             "0.14->0.15-part1": Migration_0_14_to_0_15_Part1,
             "0.14->0.15": Migration_0_14_to_0_15_Part2,
             "0.15->0.16": Migration_0_15_to_0_16,
-            "0.16->0.17": Migration_0_16_to_0_17,
+            "0.16->0.17-part1": Migration_0_16_to_0_17_Part1,
+            "0.16->0.17-part2": Migration_0_16_to_0_17_Part2,
+            "0.16->0.17": Migration_0_16_to_0_17_Part3,
             "0.17->0.18": Migration_0_17_to_0_18,
         }
         
@@ -69,7 +73,9 @@ class MigrationEngine:
             "0.14": "0.15-part1",
             "0.15-part1": "0.15",
             "0.15": "0.16",
-            "0.16": "0.17",
+            "0.16": "0.17-part1",
+            "0.17-part1": "0.17-part2",
+            "0.17-part2": "0.17",
             "0.17": "0.18"
         }
         

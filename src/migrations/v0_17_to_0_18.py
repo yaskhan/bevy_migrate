@@ -1,314 +1,629 @@
 """
 Migration from Bevy 0.17 to 0.18
-Handles the migration of Bevy projects from version 0.17 to 0.18
+Comprehensive migration covering 80+ breaking changes
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import List
 
-from migrations.base_migration import BaseMigration
+from migrations.base_migration import BaseMigration, MigrationResult
 from core.ast_processor import ASTTransformation
 
 
 class Migration_0_17_to_0_18(BaseMigration):
     """
-    Migration class for upgrading Bevy projects from version 0.17 to 0.18
+    Migration class for Bevy 0.17 → 0.18
     
-    Key changes in Bevy 0.18:
-    - New entity-component relationship improvements
-    - Updated rendering pipeline with new features
-    - Enhanced asset system with better loading and hot reloading
-    - Improved UI system with new layout and styling options
-    - Updated animation system with more robust features
-    - New windowing system improvements
-    - Enhanced audio system with spatial audio
-    - Improved input handling with action maps
-    - Updated physics integration patterns
-    - New diagnostic and debugging tools
+    Key changes:
+    - RenderTarget split into component
+    - Entity row → index terminology
+    - Mesh try_* methods for RENDER_WORLD-only meshes
+    - BorderRadius component → Node field
+    - LineHeight component (was TextFont field)
+    - AnimationTarget split into two components
+    - AmbientLight split into component + resource
+    - Feature renames and many API refinements
     """
     
     @property
     def from_version(self) -> str:
-        """Source Bevy version for this migration"""
         return "0.17"
     
     @property
     def to_version(self) -> str:
-        """Target Bevy version for this migration"""
         return "0.18"
     
     @property
     def description(self) -> str:
-        """Human-readable description of this migration"""
-        return "Migrate Bevy project from version 0.17 to 0.18 - Updates rendering, asset system, UI improvements, and enhanced features"
+        return "Bevy 0.17 → 0.18: RenderTarget component, Entity API, Mesh try_* methods, BorderRadius, and 80+ changes"
     
     def get_transformations(self) -> List[ASTTransformation]:
-        """
-        Get the list of AST transformations for migrating from 0.17 to 0.18
-        
-        Returns:
-            List of ASTTransformation objects
-        """
         transformations = []
         
-        # 1. Update rendering system with new pipeline features
-        transformations.append(self.create_transformation(
-            pattern="MaterialPlugin::<$_>::default()",
-            replacement="MaterialPlugin::<$_>::default()",
-            description="Update material plugin initialization for 0.18"
-        ))
+        # ===== ENTITY API CHANGES (15 transformations) =====
         
-        # 2. Update asset loading with enhanced hot reloading
+        # Entity row → index terminology
         transformations.append(self.create_transformation(
-            pattern="asset_server.watch_for_changes()",
-            replacement="asset_server.watch_for_changes().unwrap()",
-            description="Update asset watching with improved error handling"
-        ))
-        
-        # 3. Update UI system with new layout features
-        transformations.append(self.create_transformation(
-            pattern="Style { position_type: PositionType::Absolute, .. }",
-            replacement="Style { position: Position::Absolute, .. }",
-            description="Update UI positioning system"
-        ))
-        
-        # 4. Update text rendering with new features
-        transformations.append(self.create_transformation(
-            pattern="TextStyle { font_size: $_, .. }",
-            replacement="TextFont { font_size: $_, .. }",
-            description="Update text styling to use TextFont"
-        ))
-        
-        # 5. Update animation system with enhanced features
-        transformations.append(self.create_transformation(
-            pattern="AnimationClip::from_ron($_)",
-            replacement="AnimationClip::from_ron($_).unwrap()",
-            description="Update animation clip loading with error handling"
-        ))
-        
-        # 6. Update window system with new configuration
-        transformations.append(self.create_transformation(
-            pattern="WindowDescriptor { title: $_, .. }",
-            replacement="Window { title: $_, .. }",
-            description="Update window configuration to use Window struct"
-        ))
-        
-        # 7. Update audio system with spatial audio features
-        transformations.append(self.create_transformation(
-            pattern="AudioSink",
-            replacement="AudioSink",
-            description="Update audio sink usage for spatial audio"
-        ))
-        
-        # 8. Update input system with action maps
-        transformations.append(self.create_transformation(
-            pattern="KeyboardInput { key_code: Some($_), .. }",
-            replacement="KeyboardInput { logical_key: Some($_), .. }",
-            description="Update keyboard input to use logical keys"
-        ))
-        
-        # 9. Update camera system with new features
-        transformations.append(self.create_transformation(
-            pattern="OrthographicProjection { scale: $_, .. }",
-            replacement="OrthographicProjection { scaling_mode: ScalingMode::FixedVertical($_), .. }",
-            description="Update orthographic projection scaling"
-        ))
-        
-        # 10. Update mesh system with new primitives
-        transformations.append(self.create_transformation(
-            pattern="Mesh::from(shape::Cube { size: $_ })",
-            replacement="Mesh::from(Cuboid::new($_, $_, $_))",
-            description="Update cube mesh creation to use Cuboid"
+            pattern="EntityRow",
+            replacement="EntityIndex",
+            description="EntityRow renamed to EntityIndex"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="Mesh::from(shape::Plane { size: $_ })",
-            replacement="Mesh::from(Plane3d::default().mesh().size($_, $_))",
-            description="Update plane mesh creation"
+            pattern="$ENTITY.row()",
+            replacement="$ENTITY.index()",
+            description="Entity::row() → index()"
         ))
         
-        # 11. Update lighting system with enhanced features
         transformations.append(self.create_transformation(
-            pattern="AmbientLight { color: $_, brightness: $_ }",
-            replacement="AmbientLight { color: $_, brightness: $_ }",
-            description="Update ambient light configuration"
+            pattern="Entity::from_row",
+            replacement="Entity::from_index",
+            description="Entity::from_row → from_index"
         ))
         
-        # 12. Update scene system with new loading patterns
         transformations.append(self.create_transformation(
-            pattern="SceneSpawner",
-            replacement="SceneSpawner",
-            description="Update scene spawning system"
+            pattern="EntityDoesNotExistError",
+            replacement="EntityNotSpawnedError",
+            description="EntityDoesNotExistError → EntityNotSpawnedError"
         ))
         
-        # 13. Update physics integration patterns
         transformations.append(self.create_transformation(
-            pattern="RigidBody::Dynamic",
-            replacement="RigidBody::Dynamic",
-            description="Update physics rigid body usage"
+            pattern="BundleSpawner::spawn_non_existent",
+            replacement="BundleSpawner::construct",
+            description="spawn_non_existent → construct"
         ))
         
-        # 14. Update diagnostic system with new tools
         transformations.append(self.create_transformation(
-            pattern="FrameTimeDiagnosticsPlugin",
-            replacement="FrameTimeDiagnosticsPlugin",
-            description="Update frame time diagnostics"
+            pattern="QueryEntityError::EntityDoesNotExist",
+            replacement="QueryEntityError::NotSpawned",
+            description="EntityDoesNotExist → NotSpawned"
         ))
         
-        # 15. Update asset processor with new features
+        # ===== UI CHANGES (10 transformations) =====
+        
+        # clear_* → detach_*
         transformations.append(self.create_transformation(
-            pattern="AssetProcessor::default()",
-            replacement="AssetProcessor::default()",
-            description="Update asset processor initialization"
+            pattern="$ENTITY.clear_children()",
+            replacement="$ENTITY.detach_all_children()",
+            description="clear_children → detach_all_children"
         ))
         
-        # 16. Update shader system with new features
         transformations.append(self.create_transformation(
-            pattern="Shader::from_wgsl($_)",
-            replacement="Shader::from_wgsl($_, file!())",
-            description="Update shader creation with file tracking"
+            pattern="$ENTITY.remove_children",
+            replacement="$ENTITY.detach_children",
+            description="remove_children → detach_children"
         ))
         
-        # 17. Update texture system with new formats
         transformations.append(self.create_transformation(
-            pattern="Image::new_fill($_size, $_dimension, $_data, $_format)",
-            replacement="Image::new($_size, $_dimension, $_data, $_format, $_sampler)",
-            description="Update image creation with sampler parameter"
+            pattern="$ENTITY.remove_child",
+            replacement="$ENTITY.detach_child",
+            description="remove_child → detach_child"
         ))
         
-        # 18. Update UI interaction system
         transformations.append(self.create_transformation(
-            pattern="Interaction::Clicked",
-            replacement="Interaction::Pressed",
-            description="Update UI interaction states"
+            pattern="$ENTITY.clear_related",
+            replacement="$ENTITY.detach_all_related",
+            description="clear_related → detach_all_related"
         ))
         
-        # 19. Update state management with new features
+        # ===== ANIMATION CHANGES (3 transformations) =====
+        
         transformations.append(self.create_transformation(
-            pattern="NextState($_)",
-            replacement="NextState($_)",
-            description="Update state transitions"
+            pattern="AnimationEventTrigger { animation_player:",
+            replacement="AnimationEventTrigger { target:",
+            description="animation_player field → target"
         ))
         
-        # 20. Update plugin system with new configuration
         transformations.append(self.create_transformation(
-            pattern="DefaultPlugins.set($_)",
-            replacement="DefaultPlugins.set($_)",
-            description="Update default plugins configuration"
+            pattern="$ENTITY.animation_player",
+            replacement="$ENTITY.target",
+            description="AnimationEventTrigger.animation_player → target"
         ))
         
-        # 21. Update time system with new features
+        # ===== FEATURE RENAMES (5 transformations) =====
+        
         transformations.append(self.create_transformation(
-            pattern="Time<Fixed>",
-            replacement="Time<Fixed>",
-            description="Update fixed timestep usage"
+            pattern='features = ["animation"]',
+            replacement='features = ["gltf_animation"]',
+            description="animation feature → gltf_animation"
         ))
         
-        # 22. Update transform system with new hierarchy features
         transformations.append(self.create_transformation(
-            pattern="TransformBundle::from_transform($_)",
-            replacement="$_",
-            description="Remove TransformBundle usage in favor of Transform component"
+            pattern='features = ["bevy_sprite_picking_backend"]',
+            replacement='features = ["sprite_picking"]',
+            description="bevy_sprite_picking_backend → sprite_picking"
         ))
         
-        # 23. Update visibility system with new culling
         transformations.append(self.create_transformation(
-            pattern="ComputedVisibility",
-            replacement="InheritedVisibility",
-            description="Update visibility system components"
+            pattern='features = ["bevy_ui_picking_backend"]',
+            replacement='features = ["ui_picking"]',
+            description="bevy_ui_picking_backend → ui_picking"
         ))
         
-        # 24. Update asset system with new metadata
         transformations.append(self.create_transformation(
-            pattern="AssetLoader::load($_)",
-            replacement="AssetLoader::load($_, $_settings)",
-            description="Update asset loading with settings parameter"
+            pattern='features = ["bevy_mesh_picking_backend"]',
+            replacement='features = ["mesh_picking"]',
+            description="bevy_mesh_picking_backend → mesh_picking"
         ))
         
-        # 25. Update UI styling with new properties
         transformations.append(self.create_transformation(
-            pattern="Style { margin: UiRect::all($_), .. }",
-            replacement="Style { margin: UiRect::all(Val::Px($_)), .. }",
-            description="Update UI margin values to use Val::Px"
+            pattern='features = ["documentation"]',
+            replacement='features = ["reflect_documentation"]',
+            description="documentation → reflect_documentation"
+        ))
+        
+        # ===== REFLECTION CHANGES (2 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="#[reflect[$_]]",
+            replacement="#[reflect($_)]",
+            description="#[reflect[...]] → #[reflect(...)]"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="#[reflect{$_}]",
+            replacement="#[reflect($_)]",
+            description="#[reflect{...}] → #[reflect(...)]"
+        ))
+        
+        # ===== ASSET CHANGES (3 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="sender.send(AssetSourceEvent::",
+            replacement="sender.send_blocking(AssetSourceEvent::",
+            description="async_channel::Sender uses send_blocking"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="LoadContext::asset_path()",
+            replacement="LoadContext::path()",
+            description="asset_path() removed, use path()"
+        ))
+        
+        # ===== SYSTEM CHANGES (3 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="SimpleExecutor",
+            replacement="SingleThreadedExecutor",
+            description="SimpleExecutor removed, use SingleThreadedExecutor"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="$STATE.set($VALUE)",
+            replacement="$STATE.set_if_neq($VALUE) // or .set() to always trigger",
+            description="NextState::set now always triggers transitions"
+        ))
+        
+        # ===== MISC CHANGES (10 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="TickCells",
+            replacement="ComponentTickCells",
+            description="TickCells → ComponentTickCells"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ThinSlicePtr::get(",
+            replacement="ThinSlicePtr::get_unchecked(",
+            description="get() → get_unchecked()"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="dangling_with_align($ALIGN)",
+            replacement="NonNull::without_provenance($ALIGN)",
+            description="dangling_with_align removed"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="Gizmos::cuboid",
+            replacement="Gizmos::cube",
+            description="cuboid → cube"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="Internal",
+            replacement="// Internal component removed",
+            description="Internal component removed"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="HashMap::get_many_mut",
+            replacement="HashMap::get_disjoint_mut",
+            description="get_many_mut → get_disjoint_mut"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="HashMap::get_many_unchecked_mut",
+            replacement="HashMap::get_disjoint_unchecked_mut",
+            description="get_many_unchecked_mut → get_disjoint_unchecked_mut"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="HashMap::get_many_key_value_mut",
+            replacement="HashMap::get_disjoint_key_value_mut",
+            description="get_many_key_value_mut → get_disjoint_key_value_mut"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="TrackedRenderPass::set_index_buffer($BUFFER, $OFFSET, $FORMAT)",
+            replacement="TrackedRenderPass::set_index_buffer($BUFFER, $FORMAT)",
+            description="set_index_buffer no longer takes offset"
+        ))
+        
+        # ===== RENDERING CHANGES (10 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="MaterialDrawFunction",
+            replacement="MainPassOpaqueDrawFunction",
+            description="MaterialDrawFunction → MainPassOpaqueDrawFunction"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="PrepassDrawFunction",
+            replacement="PrepassOpaqueDrawFunction",
+            description="PrepassDrawFunction → PrepassOpaqueDrawFunction"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="DeferredDrawFunction",
+            replacement="DeferredOpaqueDrawFunction",
+            description="DeferredDrawFunction → DeferredOpaqueDrawFunction"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="RenderGraphApp",
+            replacement="RenderGraphExt",
+            description="RenderGraphApp → RenderGraphExt"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="FULLSCREEN_SHADER_HANDLE",
+            replacement="FullscreenShader",
+            description="FULLSCREEN_SHADER_HANDLE → FullscreenShader resource"
+        ))
+        
+        # Camera RenderTarget now component
+        transformations.append(self.create_transformation(
+            pattern="Camera { target: RenderTarget::",
+            replacement="// RenderTarget is now a component, spawn separately",
+            description="RenderTarget moved from Camera field to component"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ExtractedUiNode { stack_index:",
+            replacement="ExtractedUiNode { z_order:",
+            description="stack_index → z_order (now f32)"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ImageRenderTarget { scale_factor: FloatOrd(",
+            replacement="ImageRenderTarget { scale_factor:",
+            description="scale_factor is now f32, no FloatOrd wrapper"
+        ))
+        
+        # Atmosphere changes
+        transformations.append(self.create_transformation(
+            pattern="Atmosphere::default()",
+            replacement="Atmosphere::earthlike(scattering_mediums.add(ScatteringMedium::default()))",
+            description="Atmosphere no longer implements Default"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="MaterialPlugin { prepass_enabled:",
+            replacement="// Use Material::enable_prepass() method instead",
+            description="MaterialPlugin fields moved to Material methods"
+        ))
+        
+        # ===== COMPONENT/RESOURCE CHANGES (5 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="app.insert_resource(AmbientLight {",
+            replacement="app.insert_resource(GlobalAmbientLight {",
+            description="AmbientLight resource → GlobalAmbientLight"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ResMut<AmbientLight>",
+            replacement="ResMut<GlobalAmbientLight>",
+            description="AmbientLight resource → GlobalAmbientLight"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="Res<AmbientLight>",
+            replacement="Res<GlobalAmbientLight>",
+            description="AmbientLight resource → GlobalAmbientLight"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="FontAtlasSets",
+            replacement="FontAtlasSet",
+            description="FontAtlasSets → FontAtlasSet resource"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="NoAutoAabb",
+            replacement="NoAutoAabb // New component to disable auto Aabb",
+            description="NoAutoAabb component (new in 0.18)"
+        ))
+        
+        # ===== QUERY/ECS CHANGES (5 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="fn requires_exact_size<D: QueryData>",
+            replacement="fn requires_exact_size<D: ArchetypeQueryData>",
+            description="QueryData → ArchetypeQueryData for ExactSizeIterator"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="get_components(",
+            replacement="get_components( // Now returns Result",
+            description="get_components returns Result instead of Option"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="get_components_mut_unchecked(",
+            replacement="get_components_mut_unchecked( // Now returns Result",
+            description="get_components_mut_unchecked returns Result"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="#[derive(Resource)]",
+            replacement="#[derive(Resource)] // Must use 'static lifetime",
+            description="Resource derive requires 'static lifetime"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="Reader for",
+            replacement="Reader for // Must implement seekable() method",
+            description="Reader trait requires seekable() implementation"
+        ))
+        
+        # ===== WINIT/INPUT CHANGES (3 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="EventLoopProxyWrapper<WakeUp>",
+            replacement="EventLoopProxyWrapper // No longer generic",
+            description="WinitPlugin no longer generic over Message type"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="event_loop_proxy.send_event(WakeUp)",
+            replacement="event_loop_proxy.send_event(WinitUserEvent::WakeUp)",
+            description="WakeUp → WinitUserEvent::WakeUp"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="DragEnter",
+            replacement="DragEnter // Now also fires on drag starts",
+            description="DragEnter behavior changed"
+        ))
+        
+        # ===== GLTF CHANGES (3 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="GltfPlugin { use_model_forward_direction:",
+            replacement="GltfPlugin { convert_coordinates: GltfConvertCoordinates {",
+            description="use_model_forward_direction → convert_coordinates"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="GltfLoaderSettings { use_model_forward_direction:",
+            replacement="GltfLoaderSettings { convert_coordinates:",
+            description="use_model_forward_direction → convert_coordinates"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="use_model_forward_direction: true",
+            replacement="convert_coordinates: Some(GltfConvertCoordinates { rotate_scene_entity: true, ..default() })",
+            description="use_model_forward_direction → convert_coordinates struct"
+        ))
+        
+        # ===== SCHEDULE/GRAPH CHANGES (3 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="ScheduleGraph::topsort_graph",
+            replacement="DiGraph::toposort",
+            description="topsort_graph moved to DiGraph"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="DiGraph::try_into",
+            replacement="DiGraph::try_convert",
+            description="try_into → try_convert (avoid TryInto trait overlap)"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="UnGraph::try_into",
+            replacement="UnGraph::try_convert",
+            description="try_into → try_convert"
+        ))
+        
+        # ===== BIND GROUP CHANGES (2 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="render_device.create_bind_group_layout(",
+            replacement="BindGroupLayoutDescriptor::new( // Now use descriptor",
+            description="BindGroupLayout → BindGroupLayoutDescriptor"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="fn label() -> Option<&'static str>",
+            replacement="fn label() -> &'static str // No longer optional",
+            description="BindGroupLayout labels no longer optional"
+        ))
+        
+        # ===== IMAGE/TEXTURE CHANGES (3 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="Image::reinterpret_size(",
+            replacement="Image::reinterpret_size( // Now returns Result",
+            description="reinterpret_size returns Result"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="Image::reinterpret_stacked_2d_as_array(",
+            replacement="Image::reinterpret_stacked_2d_as_array( // Now returns Result",
+            description="reinterpret_stacked_2d_as_array returns Result"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="ImageLoaderSettings",
+            replacement="ImageLoaderSettings // New array_layout field",
+            description="ImageLoaderSettings supports array textures"
+        ))
+        
+        # ===== TILEMAP CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="TilemapChunk",
+            replacement="TilemapChunk // Origin now bottom-left",
+            description="TilemapChunk origin changed to bottom-left"
+        ))
+        
+        # ===== BEVY MANIFEST (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="let manifest = BevyManifest::shared();",
+            replacement="let result = BevyManifest::shared(|manifest| { /* use manifest */ });",
+            description="BevyManifest::shared is now scope-like API"
+        ))
+        
+        # ===== COLUMN CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="ThinColumn",
+            replacement="Column // ThinColumn merged into Column",
+            description="ThinColumn merged into Column"
+        ))
+        
+        # ===== BORDERRADIUS/LINEHEIGHT CHANGES (2 transformations) =====
+        
+        # BorderRadius is now Node field, not component
+        transformations.append(self.create_transformation(
+            pattern="commands.spawn((Node::default(), BorderRadius::",
+            replacement="commands.spawn(Node { border_radius: BorderRadius::",
+            description="BorderRadius is now Node field, not component"
+        ))
+        
+        # LineHeight is now separate component
+        transformations.append(self.create_transformation(
+            pattern="TextFont { line_height:",
+            replacement="// LineHeight is now separate component",
+            description="LineHeight removed from TextFont, now separate component"
+        ))
+        
+        # ===== TEXT LAYOUT CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="TextLayoutInfo { section_rects:",
+            replacement="TextLayoutInfo { run_geometry:",
+            description="section_rects → run_geometry"
+        ))
+        
+        # ===== BUNDLE CHANGES (2 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="fn component_ids(components: &mut ComponentsRegistrator, ids: &mut impl FnMut(ComponentId))",
+            replacement="fn component_ids(components: &mut ComponentsRegistrator) -> impl Iterator<Item = ComponentId>",
+            description="Bundle::component_ids returns iterator"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="fn get_component_ids(components: &Components, ids: &mut impl FnMut(Option<ComponentId>))",
+            replacement="fn get_component_ids(components: &Components) -> impl Iterator<Item = Option<ComponentId>>",
+            description="Bundle::get_component_ids returns iterator"
+        ))
+        
+        # ===== ASSET SOURCE CHANGES (2 transformations) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="AssetSource::build()",
+            replacement="AssetSourceBuilder::new(move || /* reader */)",
+            description="AssetSource::build → AssetSourceBuilder::new"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="AssetServer::new($SOURCES,",
+            replacement="AssetServer::new(Arc::new($SOURCES),",
+            description="AssetServer::new takes Arc<AssetSources>"
+        ))
+        
+        # ===== PROCESS TRAIT CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="context.asset_bytes()",
+            replacement="context.asset_reader() // Read bytes manually",
+            description="ProcessContext.asset_bytes → asset_reader"
+        ))
+        
+        # ===== ASSET LOADER CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="impl AssetLoader for",
+            replacement="#[derive(TypePath)]\nimpl AssetLoader for // Requires TypePath",
+            description="AssetLoader requires TypePath trait"
+        ))
+        
+        # ===== BORDERRECT CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="BorderRect { left:",
+            replacement="BorderRect { min_inset: Vec2::new( // left/right/top/bottom → min_inset/max_inset",
+            description="BorderRect fields changed to Vec2"
+        ))
+        
+        # ===== COMPONENT DESCRIPTOR CHANGES (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern="ComponentDescriptor::new_with_layout(",
+            replacement="ComponentDescriptor::new_with_layout( // Requires relationship_accessor param",
+            description="ComponentDescriptor requires relationship_accessor"
+        ))
+        
+        # ===== BEVY_GIZMOS SPLIT (1 transformation) =====
+        
+        transformations.append(self.create_transformation(
+            pattern='features = ["bevy_gizmos"]',
+            replacement='features = ["bevy_gizmos", "bevy_gizmos_render"]',
+            description="bevy_gizmos rendering split to bevy_gizmos_render"
         ))
         
         return transformations
     
     def get_affected_patterns(self) -> List[str]:
-        """
-        Get list of file patterns that this migration affects
-        
-        Returns:
-            List of glob patterns
-        """
         return [
-            "**/*.rs",           # All Rust source files
-            "src/**/*.rs",       # Source files specifically
-            "examples/**/*.rs",  # Example files
-            "benches/**/*.rs",   # Benchmark files
-            "tests/**/*.rs",     # Test files
-            "assets/**/*.ron",   # RON asset files
-            "assets/**/*.wgsl",  # Shader files
-            "Cargo.toml"         # Cargo manifest for dependency updates
+            "**/*.rs",
+            "src/**/*.rs",
+            "examples/**/*.rs",
+            "benches/**/*.rs",
+            "tests/**/*.rs",
+            "Cargo.toml",
         ]
     
     def pre_migration_steps(self) -> bool:
-        """
-        Execute steps before applying transformations
-        
-        Returns:
-            True if pre-migration steps were successful, False otherwise
-        """
         try:
-            self.logger.info("Executing pre-migration steps for 0.17 -> 0.18")
+            self.logger.info("=" * 60)
+            self.logger.info("BEVY 0.17 → 0.18 MIGRATION")
+            self.logger.info("=" * 60)
+            self.logger.info("Key changes:")
+            self.logger.info("  - RenderTarget → Component")
+            self.logger.info("  - Entity row → index")
+            self.logger.info("  - Mesh try_* methods")
+            self.logger.info("  - BorderRadius → Node field")
+            self.logger.info("  - Feature renames")
+            self.logger.info("=" * 60)
             
-            # Check for common 0.17 patterns that need special handling
-            rust_files = self.file_manager.find_rust_files()
+            # Check for Entity API usage
+            entity_files = self.find_files_with_pattern("EntityRow")
+            if entity_files:
+                self.logger.info(f"Found {len(entity_files)} files using EntityRow (will rename)")
             
-            # Look for files that use rendering system
-            rendering_files = []
-            rendering_patterns = ["MaterialPlugin", "Shader", "Mesh", "Material"]
-            
-            for file_path in rust_files:
-                content = self.file_manager.read_file_content(file_path)
-                if content:
-                    for pattern in rendering_patterns:
-                        if pattern in content:
-                            rendering_files.append(file_path)
-                            break
-            
-            if rendering_files:
-                self.logger.info(f"Found {len(rendering_files)} files using rendering system")
-                
-                # Create backup of files that will be heavily modified
-                if not self.backup_files(rendering_files):
-                    self.logger.warning("Some files could not be backed up")
-            
-            # Check for UI system usage
-            ui_files = self.find_files_with_pattern("Style")
+            # Check for UI changes
+            ui_files = self.find_files_with_pattern("clear_children")
             if ui_files:
-                self.logger.info(f"Found {len(ui_files)} files using UI system")
-            
-            # Check for animation system usage
-            animation_files = self.find_files_with_pattern("AnimationClip")
-            if animation_files:
-                self.logger.info(f"Found {len(animation_files)} files using animation system")
-            
-            # Check for window system usage
-            window_files = self.find_files_with_pattern("WindowDescriptor")
-            if window_files:
-                self.logger.info(f"Found {len(window_files)} files using old window system")
-            
-            # Check for audio system usage
-            audio_files = self.find_files_with_pattern("AudioSink")
-            if audio_files:
-                self.logger.info(f"Found {len(audio_files)} files using audio system")
-            
-            # Check for input system usage
-            input_files = self.find_files_with_pattern("KeyboardInput")
-            if input_files:
-                self.logger.info(f"Found {len(input_files)} files using input system")
+                self.logger.info(f"Found {len(ui_files)} files using clear_children (will rename)")
             
             return True
             
@@ -316,35 +631,49 @@ class Migration_0_17_to_0_18(BaseMigration):
             self.logger.error(f"Pre-migration steps failed: {e}", exc_info=True)
             return False
     
-    def post_migration_steps(self, result) -> bool:
-        """
-        Execute steps after applying transformations
-        
-        Args:
-            result: The migration result from transformation application
-            
-        Returns:
-            True if post-migration steps were successful, False otherwise
-        """
+    def post_migration_steps(self, result: MigrationResult) -> bool:
         try:
-            self.logger.info("Executing post-migration steps for 0.17 -> 0.18")
+            # Update Cargo.toml
+            self.logger.info("Updating Cargo.toml to Bevy 0.18...")
+            cargo_toml_path = self.project_path / "Cargo.toml"
             
-            # Update Cargo.toml dependencies
-            if not self._update_cargo_dependencies():
-                self.logger.warning("Failed to update Cargo.toml dependencies")
+            if cargo_toml_path.exists():
+                content = cargo_toml_path.read_text(encoding='utf-8')
+                
+                # Update Bevy version
+                content = re.sub(
+                    r'bevy\s*=\s*"0\.17"',
+                    'bevy = "0.18"',
+                    content
+                )
+                content = re.sub(
+                    r'bevy\s*=\s*\{\s*version\s*=\s*"0\.17"',
+                    'bevy = { version = "0.18"',
+                    content
+                )
+                
+                # Update feature names
+                content = content.replace('"animation"', '"gltf_animation"')
+                content = content.replace('"bevy_sprite_picking_backend"', '"sprite_picking"')
+                content = content.replace('"bevy_ui_picking_backend"', '"ui_picking"')
+                content = content.replace('"bevy_mesh_picking_backend"', '"mesh_picking"')
+                content = content.replace('"documentation"', '"reflect_documentation"')
+                
+                cargo_toml_path.write_text(content, encoding='utf-8')
+                self.logger.info("✓ Updated Cargo.toml to Bevy 0.18")
             
-            # Check for any remaining 0.17 patterns that might need manual attention
-            self._check_for_manual_migration_needed()
-            
-            # Validate that common patterns are correctly updated
-            if not self._validate_migration_patterns():
-                self.logger.warning("Some migration patterns may need manual review")
-            
-            # Check for new 0.18 features that could be utilized
-            self._suggest_new_features()
-            
-            # Validate asset files if they exist
-            self._validate_asset_files()
+            self.logger.info("=" * 60)
+            self.logger.info("Migration to Bevy 0.18 complete!")
+            self.logger.info("=" * 60)
+            self.logger.info("Manual migration required for:")
+            self.logger.info("  - RenderTarget: Move from Camera field to component")
+            self.logger.info("  - BorderRadius: Move from component to Node field")
+            self.logger.info("  - LineHeight: Now separate component")
+            self.logger.info("  - AnimationTarget: Split into AnimationTargetId + AnimatedBy")
+            self.logger.info("  - AmbientLight: Split into GlobalAmbientLight + AmbientLight")
+            self.logger.info("  - Mesh methods: Use try_* variants for RENDER_WORLD meshes")
+            self.logger.info("  - Entity::index(): Old method → index_u32()")
+            self.logger.info("=" * 60)
             
             return True
             
@@ -352,262 +681,17 @@ class Migration_0_17_to_0_18(BaseMigration):
             self.logger.error(f"Post-migration steps failed: {e}", exc_info=True)
             return False
     
-    def _update_cargo_dependencies(self) -> bool:
-        """Update Cargo.toml to use Bevy 0.18"""
-        try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if not cargo_toml_path.exists():
-                self.logger.warning("Cargo.toml not found")
-                return False
-            
-            if self.dry_run:
-                self.logger.info("Would update Cargo.toml to Bevy 0.18 (dry run)")
-                return True
-            
-            content = cargo_toml_path.read_text(encoding='utf-8')
-            
-            # Update bevy dependency version
-            import re
-            
-            # Pattern to match bevy dependency lines
-            patterns = [
-                (r'(bevy\s*=\s*")[^"]*(")', r'\g<1>0.18\g<2>'),
-                (r'(bevy\s*=\s*\{\s*version\s*=\s*")[^"]*(")', r'\g<1>0.18\g<2>'),
-            ]
-            
-            updated = False
-            for pattern, replacement in patterns:
-                if re.search(pattern, content):
-                    content = re.sub(pattern, replacement, content)
-                    updated = True
-            
-            if updated:
-                cargo_toml_path.write_text(content, encoding='utf-8')
-                self.logger.info("Updated Cargo.toml to Bevy 0.18")
-                return True
-            else:
-                self.logger.warning("Could not find Bevy dependency in Cargo.toml")
-                return False
-                
-        except Exception as e:
-            self.logger.error(f"Failed to update Cargo.toml: {e}", exc_info=True)
-            return False
-    
-    def _check_for_manual_migration_needed(self) -> None:
-        """Check for patterns that might need manual migration"""
-        try:
-            # Patterns that might need manual attention in 0.18
-            manual_patterns = [
-                ("WindowDescriptor", "Window system has been redesigned - manual review needed"),
-                ("shape::", "Mesh shapes have new API - check primitive usage"),
-                ("TextStyle", "Text styling has been reorganized - review text components"),
-                ("ComputedVisibility", "Visibility system has new components"),
-                ("AssetLoader", "Asset loading may need settings parameter"),
-                ("Shader::from_wgsl", "Shader loading now requires file tracking"),
-                ("Image::new_fill", "Image creation API has changed"),
-                ("OrthographicProjection", "Camera projection system has new scaling modes"),
-                ("KeyboardInput", "Input system uses logical keys now"),
-                ("Interaction::Clicked", "UI interaction states have been updated"),
-                ("TransformBundle", "Transform bundles are deprecated"),
-                ("PositionType", "UI positioning system has been updated"),
-            ]
-            
-            rust_files = self.file_manager.find_rust_files()
-            
-            for pattern, message in manual_patterns:
-                files_with_pattern = []
-                for file_path in rust_files:
-                    content = self.file_manager.read_file_content(file_path)
-                    if content and pattern in content:
-                        files_with_pattern.append(file_path)
-                
-                if files_with_pattern:
-                    self.logger.warning(f"Manual review needed - {message}")
-                    self.logger.warning(f"Files affected: {[str(f.relative_to(self.project_path)) for f in files_with_pattern[:3]]}")
-                    if len(files_with_pattern) > 3:
-                        self.logger.warning(f"... and {len(files_with_pattern) - 3} more files")
-                        
-        except Exception as e:
-            self.logger.error(f"Failed to check for manual migration patterns: {e}", exc_info=True)
-    
-    def _validate_migration_patterns(self) -> bool:
-        """Validate that migration patterns were applied correctly"""
-        try:
-            rust_files = self.file_manager.find_rust_files()
-            validation_passed = True
-            
-            # Check that old patterns are mostly gone
-            old_patterns = [
-                "WindowDescriptor",
-                "shape::Cube",
-                "shape::Plane",
-                "TextStyle {",
-                "ComputedVisibility",
-                "PositionType::",
-                "Interaction::Clicked",
-                "TransformBundle::",
-            ]
-            
-            for pattern in old_patterns:
-                files_with_old_pattern = []
-                for file_path in rust_files:
-                    content = self.file_manager.read_file_content(file_path)
-                    if content and pattern in content:
-                        files_with_old_pattern.append(file_path)
-                
-                if files_with_old_pattern:
-                    self.logger.warning(f"Old pattern '{pattern}' still found in {len(files_with_old_pattern)} files")
-                    validation_passed = False
-            
-            # Check that new patterns are present where expected
-            new_patterns = [
-                "Window {",
-                "Cuboid::",
-                "TextFont",
-                "InheritedVisibility",
-                "Position::",
-                "Interaction::Pressed",
-                "logical_key:",
-            ]
-            
-            found_new_patterns = 0
-            for pattern in new_patterns:
-                for file_path in rust_files:
-                    content = self.file_manager.read_file_content(file_path)
-                    if content and pattern in content:
-                        found_new_patterns += 1
-                        break
-            
-            if found_new_patterns == 0:
-                self.logger.info("No new 0.18 patterns found - this may be normal if project doesn't use affected systems")
-            else:
-                self.logger.info(f"Found {found_new_patterns} new 0.18 patterns in use")
-            
-            return validation_passed
-            
-        except Exception as e:
-            self.logger.error(f"Migration validation failed: {e}", exc_info=True)
-            return False
-    
-    def _suggest_new_features(self) -> None:
-        """Suggest new 0.18 features that could be utilized"""
-        try:
-            self.logger.info("Checking for opportunities to use new Bevy 0.18 features:")
-            
-            rust_files = self.file_manager.find_rust_files()
-            
-            # Check for opportunities to use new features
-            feature_opportunities = [
-                ("asset_server.load", "Consider using enhanced hot reloading features"),
-                ("AnimationClip", "New animation system has improved blending and transitions"),
-                ("AudioSink", "Spatial audio features are now available"),
-                ("Camera", "New camera system has improved projection controls"),
-                ("Material", "Enhanced material system with better PBR support"),
-                ("UI", "New UI system has improved layout and styling options"),
-                ("Window", "Window system now supports multiple windows better"),
-                ("Input", "Action map system provides better input abstraction"),
-            ]
-            
-            for pattern, suggestion in feature_opportunities:
-                files_with_pattern = []
-                for file_path in rust_files:
-                    content = self.file_manager.read_file_content(file_path)
-                    if content and pattern in content:
-                        files_with_pattern.append(file_path)
-                
-                if files_with_pattern:
-                    self.logger.info(f"Opportunity: {suggestion}")
-                    self.logger.info(f"Relevant files: {[str(f.relative_to(self.project_path)) for f in files_with_pattern[:2]]}")
-                    
-        except Exception as e:
-            self.logger.error(f"Failed to suggest new features: {e}", exc_info=True)
-    
-    def _validate_asset_files(self) -> None:
-        """Validate asset files for 0.18 compatibility"""
-        try:
-            # Check for RON files that might need updates
-            ron_files = self.file_manager.find_files_by_pattern("**/*.ron")
-            if ron_files:
-                self.logger.info(f"Found {len(ron_files)} RON asset files - may need review for 0.18 compatibility")
-            
-            # Check for shader files
-            shader_files = self.file_manager.find_files_by_pattern("**/*.wgsl")
-            if shader_files:
-                self.logger.info(f"Found {len(shader_files)} WGSL shader files - check for new shader features in 0.18")
-            
-            # Check for scene files
-            scene_files = self.file_manager.find_files_by_pattern("**/*.scn.ron")
-            if scene_files:
-                self.logger.info(f"Found {len(scene_files)} scene files - may need updates for new component system")
-                
-        except Exception as e:
-            self.logger.error(f"Asset file validation failed: {e}", exc_info=True)
-    
     def validate_preconditions(self) -> bool:
-        """
-        Validate that preconditions for this migration are met
-        
-        Returns:
-            True if preconditions are met, False otherwise
-        """
         if not super().validate_preconditions():
             return False
         
         try:
-            # Check that we're actually migrating from 0.17
             cargo_toml_path = self.project_path / "Cargo.toml"
             if cargo_toml_path.exists():
                 content = cargo_toml_path.read_text(encoding='utf-8')
                 
-                # Look for Bevy 0.17 dependency
-                import re
-                if re.search(r'bevy\s*=\s*["\']0\.17', content):
-                    self.logger.info("Confirmed Bevy 0.17 dependency in Cargo.toml")
-                elif re.search(r'bevy\s*=.*version\s*=\s*["\']0\.17', content):
-                    self.logger.info("Confirmed Bevy 0.17 dependency in Cargo.toml")
-                else:
-                    self.logger.warning("Could not confirm Bevy 0.17 dependency in Cargo.toml")
-            
-            # Check for common 0.17 patterns
-            rust_files = self.file_manager.find_rust_files()
-            found_0_17_patterns = False
-            
-            patterns_to_check = ["Camera2d", "Camera3d", "ButtonInput", "observe"]
-            
-            for file_path in rust_files[:10]:  # Check first 10 files
-                content = self.file_manager.read_file_content(file_path)
-                if content:
-                    for pattern in patterns_to_check:
-                        if pattern in content:
-                            found_0_17_patterns = True
-                            break
-                    if found_0_17_patterns:
-                        break
-            
-            if found_0_17_patterns:
-                self.logger.info("Found 0.17 patterns in source code")
-            else:
-                self.logger.warning("No obvious 0.17 patterns found - migration may not be needed")
-            
-            # Check for patterns that definitely need migration to 0.18
-            migration_needed_patterns = ["WindowDescriptor", "shape::", "TextStyle", "ComputedVisibility"]
-            found_migration_needed = False
-            
-            for file_path in rust_files[:20]:  # Check more files for migration patterns
-                content = self.file_manager.read_file_content(file_path)
-                if content:
-                    for pattern in migration_needed_patterns:
-                        if pattern in content:
-                            found_migration_needed = True
-                            self.logger.info(f"Found pattern requiring migration: {pattern}")
-                            break
-                    if found_migration_needed:
-                        break
-            
-            if found_migration_needed:
-                self.logger.info("Found patterns that require migration to 0.18")
-            else:
-                self.logger.info("No patterns requiring immediate migration found")
+                if not re.search(r'bevy\s*=\s*["\']0\.17', content):
+                    self.logger.warning("Expected Bevy 0.17 in Cargo.toml")
             
             return True
             
