@@ -2,7 +2,7 @@
 # Requirements for migrating Bevy projects from version 0.15 to 0.18
 
 # Core dependencies for AST processing and code transformation
-ast-grep>=0.12.0  # AST-based code search and transformation tool
+#ast-grep>=0.12.0  # AST-based code search and transformation tool
 
 # File system operations and path handling
 pathlib2>=2.3.7; python_version < "3.4"  # Enhanced pathlib for older Python versions
@@ -20,7 +20,7 @@ subprocess32>=3.5.4; python_version < "3.2"  # Backport of subprocess for older 
 colorlog>=6.7.0  # Colored logging output for better readability
 
 # File operations and utilities
-shutil>=3.0.0  # High-level file operations (built-in)
+#shutil>=3.0.0  # High-level file operations (built-in)
 
 # Date and time handling (built-in)
 # datetime - Built-in Python module
@@ -35,7 +35,7 @@ dataclasses>=0.8; python_version < "3.7"  # Backport of dataclasses for older Py
 typing-extensions>=4.7.1  # Extended type hints for better code quality
 
 # File pattern matching and globbing (built-in, but enhanced version)
-fnmatch>=1.0.0  # Unix filename pattern matching (built-in)
+#fnmatch>=1.0.0  # Unix filename pattern matching (built-in)
 
 # System and platform utilities (built-in)
 # platform - Built-in Python module
@@ -64,7 +64,7 @@ toml>=0.10.2  # TOML parser for Cargo.toml files
 configparser>=5.3.0  # Configuration file parser (built-in, but enhanced version)
 
 # Text processing and diff utilities
-difflib>=1.0.0  # Text diff utilities (built-in)
+#difflib>=1.0.0  # Text diff utilities (built-in)
 
 # Temporary file handling (built-in)
 # tempfile - Built-in Python module
