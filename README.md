@@ -1,209 +1,223 @@
 # Bevy Engine Migration Tool
 
-Инструмент для автоматической миграции проектов Bevy Engine между версиями 0.12, 0.13, 0.14, 0.15, 0.16, 0.17 и 0.18.
+Automated migration tool for Bevy Engine projects between versions 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, and 0.18.
 
-## 📋 Описание
+## 📋 Description
 
-Этот инструмент предназначен для автоматизации процесса миграции проектов, использующих игровой движок Bevy, между различными версиями. Инструмент поддерживает миграцию от версии 0.12 до 0.18 с использованием модульной архитектуры и AST-анализа кода.
+This tool automates the migration process for projects using the Bevy game engine between different versions. It supports migrations from version 0.12 to 0.18 using a modular architecture and AST code analysis.
 
-### Основные возможности
+### Key Features
 
-- 🔄 **Автоматическая миграция** между версиями Bevy 0.12 → 0.13 → 0.14 → 0.15 → 0.16 → 0.17 → 0.18
-- 🧩 **Модульная архитектура** с отдельными модулями для каждой версии
-- 🔍 **AST-анализ** с использованием ast-grep для точных трансформаций кода
-- 📁 **Умное управление файлами** с автоматическим резервным копированием
-- 🎯 **Автоматическое определение версии** проекта
-- 🛡️ **Безопасный режим dry-run** для предварительного просмотра изменений
-- 📊 **Подробная отчетность** о процессе миграции
+- 🔄 **Automatic migration** between Bevy versions 0.12 → 0.13 → 0.14 → 0.15 → 0.16 → 0.17 → 0.18
+- 🧩 **Modular architecture** with separate modules for each version
+- 🔍 **AST analysis** using ast-grep for precise code transformations
+- 📁 **Smart file management** with automatic backups
+- 🎯 **Automatic version detection** of your project
+- 🛡️ **Safe dry-run mode** for previewing changes
+- 📊 **Detailed reporting** of the migration process
 
-### Поддерживаемые миграции
+### Supported Migrations
 
-- **0.12 → 0.13**: Разделение WorldQuery на QueryData/QueryFilter, переименование Input в ButtonInput, переработка TextureAtlas, изменения в рендеринге и UI
-- **0.13 → 0.14**: Полная переработка Color (Srgba/LinearRgba), AnimationGraph, разделение SubApp, Dir2/Dir3, массивные изменения в рендеринге, winit 0.30, wgpu 0.20
-- **0.15 → 0.16**: Обновление системы плагинов, регистрации систем, создания сущностей
-- **0.16 → 0.17**: Переход на систему обязательных компонентов, обновление наблюдателей, системы ввода
-- **0.17 → 0.18**: Улучшения рендеринга, UI системы, оконной системы, новые возможности
+- **0.12 → 0.13**: WorldQuery split into QueryData/QueryFilter, Input renamed to ButtonInput, TextureAtlas rework, rendering and UI changes
+- **0.13 → 0.14**: Complete Color overhaul (Srgba/LinearRgba), AnimationGraph, SubApp split, Dir2/Dir3, massive rendering changes, winit 0.30, wgpu 0.20
+- **0.15 → 0.16**: Plugin system updates, system registration, entity creation improvements (72 transformations)
+- **0.16 → 0.17**: Required components system, observer updates, input system changes (130+ transformations in 3 parts)
+- **0.17 → 0.18**: Rendering improvements, UI system, window system, new features (105+ transformations)
 
-## 🛠️ Установка
+## 🛠️ Installation
 
-### Требования
+### Requirements
 
-- Python 3.7 или выше
-- ast-grep (рекомендуется для лучшей точности трансформаций)
-- Проект Rust с Bevy Engine
+- Python 3.7 or higher
+- ast-grep (recommended for better transformation accuracy)
+- Rust project with Bevy Engine
 
-### Установка зависимостей
+### Installing Dependencies
 
 ```bash
-# Клонируйте репозиторий
+# Clone the repository
 git clone <repository-url>
 cd bevy-migration-tool
 
-# Установите Python зависимости
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Установите ast-grep (опционально, но рекомендуется)
-# На Windows:
+# Install ast-grep (optional but recommended)
+# On Windows:
 cargo install ast-grep
 
-# На macOS:
+# On macOS:
 brew install ast-grep
 
-# На Linux:
+# On Linux:
 cargo install ast-grep
-# или используйте пакетный менеджер вашего дистрибутива
+# or use your distribution's package manager
 ```
 
-## 🚀 Как запустить
+## 🚀 Usage
 
-### Базовое использование
+### Basic Usage
 
 ```bash
-# Миграция проекта до последней поддерживаемой версии (0.18)
-python src/main.py /путь/к/вашему/bevy/проекту
+# Migrate project to the latest supported version (0.18)
+python src/main.py /path/to/your/bevy/project
 
-# Миграция до конкретной версии
-python src/main.py /путь/к/вашему/bevy/проекту --target-version 0.17
+# Migrate to a specific version
+python src/main.py /path/to/your/bevy/project --target-version 0.17
 
-# Предварительный просмотр изменений (без модификации файлов)
-python src/main.py /путь/к/вашему/bevy/проекту --dry-run
+# Preview changes without modifying files
+python src/main.py /path/to/your/bevy/project --dry-run
 
-# Подробный вывод с отладочной информацией
-python src/main.py /путь/к/вашему/bevy/проекту --verbose
+# Verbose output with debug information
+python src/main.py /path/to/your/bevy/project --verbose
 ```
 
-### Расширенные опции
+### Advanced Options
 
 ```bash
-# Миграция с пользовательской директорией для резервных копий
-python src/main.py /путь/к/проекту --backup-dir ./мои_резервные_копии
+# Migrate with custom backup directory
+python src/main.py /path/to/project --backup-dir ./my_backups
 
-# Принудительная миграция (если версия не определяется автоматически)
-python src/main.py /путь/к/проекту --force
+# Force migration (if version is not detected automatically)
+python src/main.py /path/to/project --force
 
-# Исключение определенных файлов или директорий
-python src/main.py /путь/к/проекту --exclude "target/**" "*.bak" "custom_dir/**"
+# Exclude specific files or directories
+python src/main.py /path/to/project --exclude "target/**" "*.bak" "custom_dir/**"
 
-# Комбинированный пример
+# Combined example
 python src/main.py ./my_bevy_game --target-version 0.17 --dry-run --verbose --backup-dir ./backups
 ```
 
-### Примеры команд
+### Command Examples
 
 ```bash
-# Пример 1: Миграция простого проекта
+# Example 1: Migrate a simple project
 python src/main.py ./my_game
 
-# Пример 2: Предварительный просмотр миграции с подробным выводом
+# Example 2: Preview migration with verbose output
 python src/main.py ./my_game --dry-run --verbose
 
-# Пример 3: Поэтапная миграция до версии 0.16
+# Example 3: Step-by-step migration to version 0.16
 python src/main.py ./my_game --target-version 0.16
 
-# Пример 4: Миграция с пользовательскими настройками
+# Example 4: Migration with custom settings
 python src/main.py ./my_game --backup-dir ./project_backups --exclude "assets/**" --verbose
 ```
 
-## 📖 Использование
+## 📖 How to Use
 
-### Пошаговая инструкция
+### Step-by-Step Guide
 
-1. **Подготовка проекта**
+1. **Prepare your project**
    ```bash
-   # Убедитесь, что ваш проект находится под контролем версий
-   cd /путь/к/вашему/bevy/проекту
+   # Make sure your project is under version control
+   cd /path/to/your/bevy/project
    git add .
-   git commit -m "Перед миграцией Bevy"
+   git commit -m "Before Bevy migration"
    ```
 
-2. **Проверка текущей версии**
+2. **Check current version**
    ```bash
-   # Инструмент автоматически определит версию, но вы можете проверить Cargo.toml
+   # The tool will auto-detect the version, but you can check Cargo.toml
    cat Cargo.toml | grep bevy
    ```
 
-3. **Запуск миграции в режиме предварительного просмотра**
+3. **Run migration in preview mode**
    ```bash
    python src/main.py . --dry-run --verbose
    ```
 
-4. **Выполнение миграции**
+4. **Execute migration**
    ```bash
    python src/main.py .
    ```
 
-5. **Проверка результатов**
+5. **Verify results**
    ```bash
-   # Проверьте, что проект компилируется
+   # Check that the project compiles
    cargo check
    
-   # Запустите тесты
+   # Run tests
    cargo test
    
-   # Запустите проект
+   # Run the project
    cargo run
    ```
 
-### Параметры командной строки
+### Command Line Parameters
 
-| Параметр | Описание | Пример |
+| Parameter | Description | Example |
 |----------|----------|---------|
-| `project_path` | Путь к проекту Bevy (обязательный) | `./my_game` |
-| `--target-version` | Целевая версия для миграции | `--target-version 0.17` |
-| `--dry-run` | Режим предварительного просмотра | `--dry-run` |
-| `--backup-dir` | Директория для резервных копий | `--backup-dir ./backups` |
-| `--verbose, -v` | Подробный вывод | `--verbose` |
-| `--force` | Принудительная миграция | `--force` |
-| `--exclude` | Исключить файлы/директории | `--exclude "target/**" "*.tmp"` |
+| `project_path` | Path to Bevy project (required) | `./my_game` |
+| `--target-version` | Target version for migration | `--target-version 0.17` |
+| `--dry-run` | Preview mode | `--dry-run` |
+| `--backup-dir` | Directory for backups | `--backup-dir ./backups` |
+| `--verbose, -v` | Verbose output | `--verbose` |
+| `--force` | Force migration | `--force` |
+| `--exclude` | Exclude files/directories | `--exclude "target/**" "*.tmp"` |
 
-## 🏗️ Архитектура проекта
+## 🏗️ Project Architecture
 
 ```
 src/
-├── main.py                     # Точка входа в приложение
-├── core/                       # Основные компоненты
-│   ├── migration_engine.py     # Движок миграции
-│   ├── ast_processor.py        # Обработчик AST
-│   └── file_manager.py         # Менеджер файлов
-├── migrations/                 # Модули миграций
-│   ├── base_migration.py       # Базовый класс миграции
-│   ├── v0_12_to_0_13.py       # Миграция 0.12 → 0.13
-│   ├── v0_13_to_0_14.py       # Миграция 0.13 → 0.14
-│   ├── v0_14_to_0_15_part1.py # Миграция 0.14 → 0.15 Part 1 (Core API)
-│   ├── v0_14_to_0_15_part2.py # Миграция 0.14 → 0.15 Part 2 (Required Components)
-│   ├── v0_15_to_0_16.py       # Миграция 0.15 → 0.16
-│   ├── v0_16_to_0_17.py       # Миграция 0.16 → 0.17
-│   └── v0_17_to_0_18.py       # Миграция 0.17 → 0.18
-├── utils/                      # Утилиты
-│   └── version_detector.py     # Определение версии
-└── config/                     # Конфигурация
-    └── migration_rules.py      # Правила миграции
+├── main.py                     # Application entry point
+├── core/                       # Core components
+│   ├── migration_engine.py     # Migration engine
+│   ├── ast_processor.py        # AST processor
+│   └── file_manager.py         # File manager
+├── migrations/                 # Migration modules
+│   ├── base_migration.py       # Base migration class
+│   ├── v0_12_to_0_13.py       # Migration 0.12 → 0.13
+│   ├── v0_13_to_0_14.py       # Migration 0.13 → 0.14
+│   ├── v0_14_to_0_15_part1.py # Migration 0.14 → 0.15 Part 1 (Core API)
+│   ├── v0_14_to_0_15_part2.py # Migration 0.14 → 0.15 Part 2 (Required Components)
+│   ├── v0_15_to_0_16.py       # Migration 0.15 → 0.16 (72 transformations)
+│   ├── v0_16_to_0_17_part1.py # Migration 0.16 → 0.17 Part 1 (Event/Message split)
+│   ├── v0_16_to_0_17_part2.py # Migration 0.16 → 0.17 Part 2 (bevy_render reorganization)
+│   ├── v0_16_to_0_17_part3.py # Migration 0.16 → 0.17 Part 3 (Entity representation)
+│   └── v0_17_to_0_18.py       # Migration 0.17 → 0.18 (105+ transformations)
+├── utils/                      # Utilities
+│   └── version_detector.py     # Version detection
+└── config/                     # Configuration
+    └── migration_rules.py      # Migration rules
 ```
 
-### Основные компоненты
+### Core Components
 
-- **MigrationEngine**: Координирует процесс миграции
-- **ASTProcessor**: Выполняет трансформации кода с использованием AST
-- **FileManager**: Управляет файловыми операциями и резервными копиями
-- **VersionDetector**: Автоматически определяет версию Bevy в проекте
-- **BaseMigration**: Базовый класс для всех модулей миграции
+- **MigrationEngine**: Coordinates the migration process
+- **ASTProcessor**: Performs code transformations using AST
+- **FileManager**: Manages file operations and backups
+- **VersionDetector**: Automatically detects Bevy version in the project
+- **BaseMigration**: Base class for all migration modules
 
-## 🔧 Конфигурация
+## 📊 Migration Statistics
 
-Инструмент использует централизованную систему конфигурации в `src/config/migration_rules.py`. Вы можете настроить:
+| Migration | Transformations | Parts | Breaking Changes |
+|-----------|----------------|-------|------------------|
+| 0.12→0.13 | ~40 | 1 | 40+ |
+| 0.13→0.14 | ~60 | 1 | 60+ |
+| 0.14→0.15 | ~80 | 2 | 80+ |
+| 0.15→0.16 | 72 | 1 | 70+ |
+| 0.16→0.17 | 130+ | 3 | 150+ |
+| 0.17→0.18 | 105+ | 1 | 80+ |
+| **Total** | **485+** | **9** | **480+** |
 
-- Правила трансформации для каждой версии
-- Паттерны файлов для обработки
-- Исключения и фильтры
-- Уровни приоритета правил
+## 🔧 Configuration
 
-### Пример настройки правил
+The tool uses a centralized configuration system in `src/config/migration_rules.py`. You can customize:
+
+- Transformation rules for each version
+- File patterns to process
+- Exclusions and filters
+- Rule priority levels
+
+### Example Custom Rule
 
 ```python
-# Добавление пользовательского правила миграции
+# Add a custom migration rule
 rule = MigrationRule(
     name="custom_transformation",
-    description="Пользовательская трансформация",
+    description="Custom transformation",
     pattern=r"old_pattern",
     replacement="new_pattern",
     file_patterns=["**/*.rs"],
@@ -211,18 +225,18 @@ rule = MigrationRule(
 )
 ```
 
-## 🛡️ Безопасность
+## 🛡️ Safety
 
-Инструмент автоматически создает резервные копии перед внесением изменений:
+The tool automatically creates backups before making changes:
 
-- **Автоматическое резервное копирование** всех изменяемых файлов
-- **Режим dry-run** для безопасного предварительного просмотра
-- **Валидация** структуры проекта перед миграцией
-- **Откат изменений** в случае ошибок
+- **Automatic backup** of all modified files
+- **Dry-run mode** for safe preview
+- **Validation** of project structure before migration
+- **Rollback** in case of errors
 
-### Расположение резервных копий
+### Backup Location
 
-По умолчанию резервные копии сохраняются в:
+By default, backups are saved to:
 ```
 your_project/
 └── migration_backup/
@@ -232,72 +246,72 @@ your_project/
         └── ...
 ```
 
-## 📊 Отчетность
+## 📊 Reporting
 
-Инструмент предоставляет подробную информацию о процессе миграции:
+The tool provides detailed information about the migration process:
 
-- Количество обработанных файлов
-- Примененные трансформации
-- Предупреждения и ошибки
-- Рекомендации для ручной проверки
+- Number of processed files
+- Applied transformations
+- Warnings and errors
+- Recommendations for manual review
 
-### Пример вывода
+### Example Output
 
 ```
-2024-02-04 08:07:56 - INFO - Обнаружена версия Bevy: 0.15
-2024-02-04 08:07:57 - INFO - Начинается миграция с 0.15 до 0.18
-2024-02-04 08:07:58 - INFO - Путь миграции: 0.15 -> 0.16 -> 0.17 -> 0.18
-2024-02-04 08:08:00 - INFO - Обработано файлов: 25
-2024-02-04 08:08:00 - INFO - Изменено файлов: 18
-2024-02-04 08:08:00 - INFO - Применено трансформаций: 47
-2024-02-04 08:08:00 - INFO - Миграция завершена успешно!
+2024-02-04 08:07:56 - INFO - Detected Bevy version: 0.15
+2024-02-04 08:07:57 - INFO - Starting migration from 0.15 to 0.18
+2024-02-04 08:07:58 - INFO - Migration path: 0.15 -> 0.16 -> 0.17 -> 0.18
+2024-02-04 08:08:00 - INFO - Files processed: 25
+2024-02-04 08:08:00 - INFO - Files modified: 18
+2024-02-04 08:08:00 - INFO - Transformations applied: 47
+2024-02-04 08:08:00 - INFO - Migration completed successfully!
 ```
 
-## 🔍 Устранение неполадок
+## 🔍 Troubleshooting
 
-### Частые проблемы
+### Common Issues
 
-1. **ast-grep не найден**
+1. **ast-grep not found**
    ```bash
-   # Установите ast-grep
+   # Install ast-grep
    cargo install ast-grep
    ```
 
-2. **Не удается определить версию Bevy**
+2. **Cannot detect Bevy version**
    ```bash
-   # Используйте флаг --force
+   # Use the --force flag
    python src/main.py . --force
    ```
 
-3. **Ошибки компиляции после миграции**
-   - Проверьте файлы, требующие ручной проверки
-   - Обратитесь к документации Bevy для конкретной версии
-   - Восстановите из резервной копии при необходимости
+3. **Compilation errors after migration**
+   - Check files requiring manual review
+   - Refer to Bevy documentation for the specific version
+   - Restore from backup if needed
 
-### Логирование
+### Logging
 
-Для получения подробной отладочной информации:
+For detailed debug information:
 
 ```bash
 python src/main.py . --verbose
 ```
 
-Логи включают:
-- Обнаруженные паттерны кода
-- Примененные трансформации
-- Предупреждения о потенциальных проблемах
-- Статистику обработки файлов
+Logs include:
+- Detected code patterns
+- Applied transformations
+- Warnings about potential issues
+- File processing statistics
 
-## 🤝 Участие в разработке
+## 🤝 Contributing
 
-### Добавление новой миграции
+### Adding a New Migration
 
-1. Создайте новый файл в `src/migrations/`
-2. Наследуйтесь от `BaseMigration`
-3. Реализуйте необходимые методы
-4. Зарегистрируйте миграцию в `MigrationEngine`
+1. Create a new file in `src/migrations/`
+2. Inherit from `BaseMigration`
+3. Implement required methods
+4. Register the migration in `MigrationEngine`
 
-### Пример нового модуля миграции
+### Example Migration Module
 
 ```python
 from migrations.base_migration import BaseMigration
@@ -317,29 +331,29 @@ class Migration_0_18_to_0_19(BaseMigration):
             self.create_transformation(
                 pattern="old_pattern",
                 replacement="new_pattern",
-                description="Описание трансформации"
+                description="Transformation description"
             )
         ]
 ```
 
-## 📝 Лицензия
+## 📝 License
 
-Этот проект распространяется под лицензией MIT. См. файл LICENSE для подробностей.
+This project is licensed under the MIT License. See the LICENSE file for details.
 
-## 🆘 Поддержка
+## 🆘 Support
 
-Если у вас возникли проблемы или вопросы:
+If you encounter issues or have questions:
 
-1. Проверьте раздел "Устранение неполадок"
-2. Создайте issue в репозитории проекта
-3. Приложите логи выполнения с флагом `--verbose`
+1. Check the "Troubleshooting" section
+2. Create an issue in the project repository
+3. Include logs from running with the `--verbose` flag
 
-## 📚 Дополнительные ресурсы
+## 📚 Additional Resources
 
-- [Официальная документация Bevy](https://bevyengine.org/)
-- [Руководство по миграции Bevy](https://bevyengine.org/learn/migration-guides/)
-- [ast-grep документация](https://ast-grep.github.io/)
+- [Official Bevy Documentation](https://bevyengine.org/)
+- [Bevy Migration Guides](https://bevyengine.org/learn/migration-guides/)
+- [ast-grep Documentation](https://ast-grep.github.io/)
 
 ---
 
-**Примечание**: Всегда создавайте резервные копии ваших проектов перед выполнением миграции. Хотя инструмент создает автоматические резервные копии, дополнительная предосторожность никогда не помешает.
+**Note**: Always create backups of your projects before running migrations. While the tool creates automatic backups, extra precaution never hurts.
