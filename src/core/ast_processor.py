@@ -139,7 +139,7 @@ class ASTProcessor:
                         file_path
                     )
                     
-                    if new_content != transformed_content:
+                    if new_content is not None and new_content != transformed_content:
                         transformed_content = new_content
                         applied_transformations.append(transformation.description)
                         self.logger.debug(f"Applied transformation '{transformation.description}' to {file_path}")
@@ -201,7 +201,9 @@ class ASTProcessor:
                 # Fallback to regex if ast-grep failed
             
             # Fallback to regex-based transformation
-            return self._apply_regex_transformation(content, transformation)
+            if not transformation.callback:
+                return self._apply_regex_transformation(content, transformation)
+            return None
         except Exception as e:
             self.logger.warning(f"AST transformation failed, falling back to regex: {e}")
             return self._apply_regex_transformation(content, transformation)
@@ -222,26 +224,26 @@ class ASTProcessor:
             try:
                 # If there's a callback, we need to find matches first
                 if transformation.callback:
-                    # Determine the rule to use: either direct YAML or pattern-based
                     if transformation.rule_yaml:
                         inline_rule = transformation.rule_yaml
+                        cmd = [
+                            "ast-grep",
+                            "scan",
+                            "--inline-rules", inline_rule,
+                            "--json",
+                            temp_file_path
+                        ]
                     else:
-                        rule_obj = {
-                            "id": "callback-query",
-                            "language": "rust",
-                            "rule": {
-                                "pattern": transformation.pattern
-                            }
-                        }
-                        inline_rule = yaml.dump(rule_obj)
+                        # Use 'run' for simple patterns as it's more permissive
+                        cmd = [
+                            "ast-grep",
+                            "run",
+                            "--pattern", transformation.pattern,
+                            "--json",
+                            temp_file_path,
+                            "--lang", "rust"
+                        ]
                     
-                    cmd = [
-                        "ast-grep",
-                        "scan",
-                        "--inline-rules", inline_rule,
-                        "--json",
-                        temp_file_path
-                    ]
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                     
                     if result.returncode == 0:
@@ -249,13 +251,12 @@ class ASTProcessor:
                         if not matches:
                             return content
                         
-                        # Apply replacements using byte offsets
                         content_bytes = content.encode('utf-8')
                         matches.sort(key=lambda x: x['range']['byteOffset']['start'], reverse=True)
                         
                         new_content_bytes = content_bytes
                         for match in matches:
-                            meta_vars = {}
+                            meta_vars = {"_matched_text": match.get('text', '')}
                             if 'metaVariables' in match:
                                 mvars = match['metaVariables']
                                 if 'single' in mvars:
@@ -269,9 +270,9 @@ class ASTProcessor:
                             end_byte = match['range']['byteOffset']['end']
                             new_content_bytes = new_content_bytes[:start_byte] + replacement_bytes + new_content_bytes[end_byte:]
                         
-                        return new_content_bytes.decode('utf-8')
+                        return new_content_bytes.decode('utf-8', errors='replace')
                     else:
-                        self.logger.debug(f"ast-grep scan failed: {result.stderr}")
+                        self.logger.debug(f"ast-grep failed with code {result.returncode}: {result.stderr}")
                         return None
 
                 # Standard replacement if no callback
@@ -288,7 +289,6 @@ class ASTProcessor:
                     }
                     inline_rule = yaml.dump(rule_obj)
                 
-                # Run ast-grep with inline rules
                 result = subprocess.run([
                     "ast-grep",
                     "scan",
@@ -298,15 +298,12 @@ class ASTProcessor:
                 ], capture_output=True, text=True, timeout=30)
                 
                 if result.returncode == 0:
-                    # Read the transformed content
-                    transformed_content = Path(temp_file_path).read_text(encoding='utf-8')
-                    return transformed_content
+                    return Path(temp_file_path).read_text(encoding='utf-8')
                 else:
-                    self.logger.debug(f"ast-grep failed: {result.stderr}")
+                    self.logger.debug(f"ast-grep scan failed: {result.stderr}")
                     return None
                     
             finally:
-                # Clean up temp file
                 Path(temp_file_path).unlink(missing_ok=True)
                 
         except Exception as e:

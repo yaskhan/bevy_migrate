@@ -12,6 +12,8 @@ from migrations.base_migration import BaseMigration, MigrationResult
 from core.ast_processor import ASTTransformation
 
 
+
+
 class Migration_0_17_to_0_18(BaseMigration):
     """
     Migration class for Bevy 0.17 → 0.18
@@ -318,10 +320,20 @@ class Migration_0_17_to_0_18(BaseMigration):
         
         # ===== COMPONENT/RESOURCE CHANGES (5 transformations) =====
         
+        # AmbientLight resource → GlobalAmbientLight (YAML rule with context)
+        ambient_light_rule = """
+id: ambient-light-resource
+language: rust
+rule:
+  kind: call_expression
+  pattern: app.insert_resource(AmbientLight { $$$ARGS })
+fix: app.insert_resource(GlobalAmbientLight { $$$ARGS })
+"""
         transformations.append(self.create_transformation(
-            pattern="app.insert_resource(AmbientLight {",
-            replacement="app.insert_resource(GlobalAmbientLight {",
-            description="AmbientLight resource → GlobalAmbientLight"
+            pattern="",
+            replacement="",
+            description="AmbientLight resource → GlobalAmbientLight",
+            rule_yaml=ambient_light_rule
         ))
         
         transformations.append(self.create_transformation(
@@ -400,24 +412,30 @@ class Migration_0_17_to_0_18(BaseMigration):
             description="DragEnter behavior changed"
         ))
         
-        # ===== GLTF CHANGES (3 transformations) =====
-        
+        # GltfPlugin changes using callback (Simple pattern that ast-grep likes)
         transformations.append(self.create_transformation(
-            pattern="GltfPlugin { use_model_forward_direction:",
-            replacement="GltfPlugin { convert_coordinates: GltfConvertCoordinates {",
-            description="use_model_forward_direction → convert_coordinates"
+            pattern="GltfPlugin { $$$ }",
+            replacement="",
+            description="GltfPlugin use_model_forward_direction → convert_coordinates",
+            callback=lambda vars, _: (
+                full := vars.get("_matched_text", "").strip(),
+                val := m.group(1).strip().lower() if (m := re.search(r"use_model_forward_direction:\s*(true|false|[^,}]+)", full)) else "true",
+                repl := f"convert_coordinates: {('Some(' if 'GltfLoaderSettings' in full else '')}GltfConvertCoordinates {{ rotate_scene_entity: {val}, ..default() }}{(')' if 'GltfLoaderSettings' in full else '')}",
+                re.sub(r"use_model_forward_direction:\s*(true|false|[^,}]+)", repl, full)
+            )[-1] if vars.get("_matched_text") and "use_model_forward_direction" in vars.get("_matched_text") else vars.get("_matched_text", "")
         ))
         
+        # Also for loader settings
         transformations.append(self.create_transformation(
-            pattern="GltfLoaderSettings { use_model_forward_direction:",
-            replacement="GltfLoaderSettings { convert_coordinates:",
-            description="use_model_forward_direction → convert_coordinates"
-        ))
-        
-        transformations.append(self.create_transformation(
-            pattern="use_model_forward_direction: true",
-            replacement="convert_coordinates: Some(GltfConvertCoordinates { rotate_scene_entity: true, ..default() })",
-            description="use_model_forward_direction → convert_coordinates struct"
+            pattern="GltfLoaderSettings { $$$ }",
+            replacement="",
+            description="GltfLoaderSettings use_model_forward_direction → convert_coordinates",
+            callback=lambda vars, _: (
+                full := vars.get("_matched_text", "").strip(),
+                val := m.group(1).strip().lower() if (m := re.search(r"use_model_forward_direction:\s*(true|false|[^,}]+)", full)) else "true",
+                repl := f"convert_coordinates: {('Some(' if 'GltfLoaderSettings' in full else '')}GltfConvertCoordinates {{ rotate_scene_entity: {val}, ..default() }}{(')' if 'GltfLoaderSettings' in full else '')}",
+                re.sub(r"use_model_forward_direction:\s*(true|false|[^,}]+)", repl, full)
+            )[-1] if vars.get("_matched_text") and "use_model_forward_direction" in vars.get("_matched_text") else vars.get("_matched_text", "")
         ))
         
         # ===== SCHEDULE/GRAPH CHANGES (3 transformations) =====
@@ -566,12 +584,39 @@ class Migration_0_17_to_0_18(BaseMigration):
             description="AssetLoader requires TypePath trait"
         ))
         
-        # ===== BORDERRECT CHANGES (1 transformation) =====
-        
+        # BorderRect changes using callback
         transformations.append(self.create_transformation(
-            pattern="BorderRect { left:",
-            replacement="BorderRect { min_inset: Vec2::new( // left/right/top/bottom → min_inset/max_inset",
-            description="BorderRect fields changed to Vec2"
+            pattern="BorderRect { $$$ }",
+            replacement="",
+            description="BorderRect fields changed to Vec2 (min_inset, max_inset)",
+            callback=lambda vars, _: (
+                full := vars.get("_matched_text", ""),
+                l := re.search(r"left:\s*([^,}]+)", full),
+                r := re.search(r"right:\s*([^,}]+)", full),
+                t := re.search(r"top:\s*([^,}]+)", full),
+                b := re.search(r"bottom:\s*([^,}]+)", full),
+                f"BorderRect {{ min_inset: Vec2::new({(l.group(1).strip() if l else '0.0')}, {(t.group(1).strip() if t else '0.0')}), max_inset: Vec2::new({(r.group(1).strip() if r else '0.0')}, {(b.group(1).strip() if b else '0.0')}) }}"
+            )[-1]
+        ))
+        
+        # AssetProcessor::new tuple return
+        asset_proc_rule = """
+id: asset-processor-new
+language: rust
+rule:
+  kind: let_declaration
+  pattern: "let $P = AssetProcessor::new($S)"
+"""
+        transformations.append(self.create_transformation(
+            pattern="",
+            replacement="",
+            description="AssetProcessor::new now returns tuple",
+            rule_yaml=asset_proc_rule,
+            callback=lambda vars, _: (
+                full := vars.get("_matched_text", ""),
+                m := re.search(r"let\s+(\w+)\s*=\s*AssetProcessor::new\(([^)]+)\)", full),
+                f"let ({m.group(1)}, _sources) = AssetProcessor::new({m.group(2)}, false)" if m else full
+            )[-1]
         ))
         
         # ===== COMPONENT DESCRIPTOR CHANGES (1 transformation) =====
