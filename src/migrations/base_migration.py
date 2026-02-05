@@ -331,10 +331,11 @@ class BaseMigration(ABC):
         replacement: str,
         description: str,
         file_patterns: Optional[List[str]] = None,
-        callback: Optional[Callable[[Dict[str, str], Path], str]] = None
+        callback: Optional[Callable[[Dict[str, str], Path], str]] = None,
+        rule_yaml: Optional[str] = None
     ) -> ASTTransformation:
         """
-        Helper method to create AST transformations
+        Helper to create a transformation for this migration
         
         Args:
             pattern: ast-grep pattern to match
@@ -342,6 +343,7 @@ class BaseMigration(ABC):
             description: Human-readable description
             file_patterns: File patterns to apply to (defaults to *.rs)
             callback: Optional Python callback to handle complex logic
+            rule_yaml: Optional inline YAML rule for ast-grep
             
         Returns:
             ASTTransformation object
@@ -351,7 +353,8 @@ class BaseMigration(ABC):
             replacement=replacement,
             description=description,
             file_patterns=file_patterns,
-            callback=callback
+            callback=callback,
+            rule_yaml=rule_yaml
         )
     
     def find_files_with_pattern(self, search_pattern: str) -> List[Path]:

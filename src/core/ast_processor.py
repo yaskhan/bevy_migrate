@@ -18,6 +18,9 @@ from dataclasses import dataclass
 @dataclass
 class ASTTransformation:
     """Represents a single AST transformation rule"""
+    pattern: str
+    replacement: str
+    description: str
     file_patterns: List[str] = None
     # New fields for complex logic
     callback: Optional[Callable[[Dict[str, str], Path], str]] = None
@@ -358,7 +361,8 @@ class ASTProcessor:
         replacement: str,
         description: str,
         file_patterns: Optional[List[str]] = None,
-        callback: Optional[Callable[[Dict[str, str], Path], str]] = None
+        callback: Optional[Callable[[Dict[str, str], Path], str]] = None,
+        rule_yaml: Optional[str] = None
     ) -> ASTTransformation:
         """
         Create a Bevy-specific AST transformation
@@ -369,19 +373,18 @@ class ASTProcessor:
             description: Human-readable description
             file_patterns: File patterns to apply to (defaults to *.rs)
             callback: Optional Python callback to handle complex logic
+            rule_yaml: Optional inline YAML rule for ast-grep
             
         Returns:
             ASTTransformation object
         """
-        if file_patterns is None:
-            file_patterns = ["*.rs"]
-        
         return ASTTransformation(
             pattern=pattern,
             replacement=replacement,
             description=description,
             file_patterns=file_patterns,
-            callback=callback
+            callback=callback,
+            rule_yaml=rule_yaml
         )
     
     def validate_transformation(self, transformation: ASTTransformation) -> bool:

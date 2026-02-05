@@ -13,7 +13,7 @@ This tool automates the migration process for projects using the Bevy game engin
 - 🔍 **AST analysis** using ast-grep for precise code transformations
 - 📁 **Smart file management** with automatic backups
 - 🎯 **Automatic version detection** of your project
-- 🧠 **Complex logic support** using Python callbacks for advanced transformations
+- 🧠 **Complex logic support** via Python callbacks and inline YAML rules
 - 🛡️ **Safe dry-run mode** for previewing changes
 - 📊 **Detailed reporting** of the migration process
 
@@ -303,21 +303,52 @@ Logs include:
 - Warnings about potential issues
 - File processing statistics
 
-## 🧠 Complex Migrations (Callbacks)
+## 🧠 Complex Migrations
 
-For transformations that require more than simple pattern replacement, you can use Python callbacks. This is useful for:
-- Conditional replacements based on captured variables
-- Dynamic string manipulation (e.g., casing, prefixing)
-- Context-aware transformations
+For transformations that require more than simple pattern replacement, the tool provides two powerful mechanisms: Python callbacks and inline YAML rules. These are applied directly without creating temporary files on disk.
 
-### Example: Dynamic Input Migration
+### 1. Python Callbacks
+Useful for conditional replacements, dynamic string manipulation, or context-aware transformations.
+
 ```python
 def input_callback(vars, file_path):
-    t_type = vars.get("T", "")
+    # vars contains captured ast-grep variables (e.g., $T)
+    t_type = vars.get("T", "unknown")
     return f"Res<ButtonInput<{t_type}>>"
 
-# In get_transformations:
+# In your migration class:
 transformations.append(self.create_transformation(
+    pattern="Res<Input<$T>>",
+    replacement="", # Ignored when callback is present
+    description="Complex replacement using Python",
+    callback=input_callback
+))
+```
+
+### 2. Inline YAML Rules
+Allows using the full power of `ast-grep` YAML configuration directly.
+
+```python
+yaml_rule = """
+id: custom-check
+language: rust
+rule:
+  pattern: foo($A)
+  inside:
+    kind: function_item
+    has:
+      field: name
+      pattern: main
+fix: bar($A)
+"""
+
+transformations.append(self.create_transformation(
+    pattern="", # pattern is ignored when rule_yaml is present
+    replacement="",
+    description="Advanced YAML rule",
+    rule_yaml=yaml_rule
+))
+```
     pattern="Res<Input<$T>>",
     replacement="", # replacement is ignored when callback is present
     description="Res<Input<T>> -> Res<ButtonInput<T>>",
