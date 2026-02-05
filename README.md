@@ -13,6 +13,7 @@ This tool automates the migration process for projects using the Bevy game engin
 - 🔍 **AST analysis** using ast-grep for precise code transformations
 - 📁 **Smart file management** with automatic backups
 - 🎯 **Automatic version detection** of your project
+- 🧠 **Complex logic support** using Python callbacks for advanced transformations
 - 🛡️ **Safe dry-run mode** for previewing changes
 - 📊 **Detailed reporting** of the migration process
 
@@ -301,6 +302,28 @@ Logs include:
 - Applied transformations
 - Warnings about potential issues
 - File processing statistics
+
+## 🧠 Complex Migrations (Callbacks)
+
+For transformations that require more than simple pattern replacement, you can use Python callbacks. This is useful for:
+- Conditional replacements based on captured variables
+- Dynamic string manipulation (e.g., casing, prefixing)
+- Context-aware transformations
+
+### Example: Dynamic Input Migration
+```python
+def input_callback(vars, file_path):
+    t_type = vars.get("T", "")
+    return f"Res<ButtonInput<{t_type}>>"
+
+# In get_transformations:
+transformations.append(self.create_transformation(
+    pattern="Res<Input<$T>>",
+    replacement="", # replacement is ignored when callback is present
+    description="Res<Input<T>> -> Res<ButtonInput<T>>",
+    callback=input_callback
+))
+```
 
 ## 🤝 Contributing
 

@@ -10,7 +10,7 @@ import json
 import tempfile
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Callable
 
 from dataclasses import dataclass
 
@@ -18,10 +18,10 @@ from dataclasses import dataclass
 @dataclass
 class ASTTransformation:
     """Represents a single AST transformation rule"""
-    pattern: str
-    replacement: str
-    description: str
     file_patterns: List[str] = None
+    # New fields for complex logic
+    callback: Optional[Callable[[Dict[str, str], Path], str]] = None
+    rule_yaml: Optional[str] = None
     
     def __post_init__(self):
         if self.file_patterns is None:
@@ -217,42 +217,90 @@ class ASTProcessor:
                 temp_file_path = temp_file.name
             
             try:
-                # Create ast-grep rule file
-                rule = {
-                    "id": "migration-rule",
-                    "language": "rust",
-                    "rule": {
-                        "pattern": transformation.pattern
-                    },
-                    "fix": transformation.replacement
-                }
-                
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as rule_file:
-                    import yaml
-                    yaml.dump(rule, rule_file)
-                    rule_file_path = rule_file.name
-                
-                try:
-                    # Run ast-grep
-                    result = subprocess.run([
+                # If there's a callback, we need to find matches first
+                if transformation.callback:
+                    # Determine the rule to use: either direct YAML or pattern-based
+                    if transformation.rule_yaml:
+                        inline_rule = transformation.rule_yaml
+                    else:
+                        rule_obj = {
+                            "id": "callback-query",
+                            "language": "rust",
+                            "rule": {
+                                "pattern": transformation.pattern
+                            }
+                        }
+                        inline_rule = yaml.dump(rule_obj)
+                    
+                    cmd = [
                         "ast-grep",
                         "scan",
-                        "--rule", rule_file_path,
-                        "--update-all",
+                        "--inline-rules", inline_rule,
+                        "--json",
                         temp_file_path
-                    ], capture_output=True, text=True, timeout=30)
+                    ]
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                     
                     if result.returncode == 0:
-                        # Read the transformed content
-                        transformed_content = Path(temp_file_path).read_text(encoding='utf-8')
-                        return transformed_content
-                    else:
-                        self.logger.debug(f"ast-grep failed: {result.stderr}")
-                        return None
+                        matches = json.loads(result.stdout)
+                        if not matches:
+                            return content
                         
-                finally:
-                    # Clean up rule file
-                    Path(rule_file_path).unlink(missing_ok=True)
+                        # Apply replacements using byte offsets
+                        content_bytes = content.encode('utf-8')
+                        matches.sort(key=lambda x: x['range']['byteOffset']['start'], reverse=True)
+                        
+                        new_content_bytes = content_bytes
+                        for match in matches:
+                            meta_vars = {}
+                            if 'metaVariables' in match:
+                                mvars = match['metaVariables']
+                                if 'single' in mvars:
+                                    for var_name, var_data in mvars['single'].items():
+                                        meta_vars[var_name] = var_data['text']
+                            
+                            replacement = transformation.callback(meta_vars, file_path)
+                            replacement_bytes = replacement.encode('utf-8')
+                            
+                            start_byte = match['range']['byteOffset']['start']
+                            end_byte = match['range']['byteOffset']['end']
+                            new_content_bytes = new_content_bytes[:start_byte] + replacement_bytes + new_content_bytes[end_byte:]
+                        
+                        return new_content_bytes.decode('utf-8')
+                    else:
+                        self.logger.debug(f"ast-grep scan failed: {result.stderr}")
+                        return None
+
+                # Standard replacement if no callback
+                if transformation.rule_yaml:
+                    inline_rule = transformation.rule_yaml
+                else:
+                    rule_obj = {
+                        "id": "migration-rule",
+                        "language": "rust",
+                        "rule": {
+                            "pattern": transformation.pattern
+                        },
+                        "fix": transformation.replacement
+                    }
+                    inline_rule = yaml.dump(rule_obj)
+                
+                # Run ast-grep with inline rules
+                result = subprocess.run([
+                    "ast-grep",
+                    "scan",
+                    "--inline-rules", inline_rule,
+                    "--update-all",
+                    temp_file_path
+                ], capture_output=True, text=True, timeout=30)
+                
+                if result.returncode == 0:
+                    # Read the transformed content
+                    transformed_content = Path(temp_file_path).read_text(encoding='utf-8')
+                    return transformed_content
+                else:
+                    self.logger.debug(f"ast-grep failed: {result.stderr}")
+                    return None
                     
             finally:
                 # Clean up temp file
@@ -309,7 +357,8 @@ class ASTProcessor:
         pattern: str,
         replacement: str,
         description: str,
-        file_patterns: Optional[List[str]] = None
+        file_patterns: Optional[List[str]] = None,
+        callback: Optional[Callable[[Dict[str, str], Path], str]] = None
     ) -> ASTTransformation:
         """
         Create a Bevy-specific AST transformation
@@ -319,6 +368,7 @@ class ASTProcessor:
             replacement: Replacement pattern
             description: Human-readable description
             file_patterns: File patterns to apply to (defaults to *.rs)
+            callback: Optional Python callback to handle complex logic
             
         Returns:
             ASTTransformation object
@@ -330,7 +380,8 @@ class ASTProcessor:
             pattern=pattern,
             replacement=replacement,
             description=description,
-            file_patterns=file_patterns
+            file_patterns=file_patterns,
+            callback=callback
         )
     
     def validate_transformation(self, transformation: ASTTransformation) -> bool:

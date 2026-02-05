@@ -330,7 +330,8 @@ class BaseMigration(ABC):
         pattern: str,
         replacement: str,
         description: str,
-        file_patterns: Optional[List[str]] = None
+        file_patterns: Optional[List[str]] = None,
+        callback: Optional[Callable[[Dict[str, str], Path], str]] = None
     ) -> ASTTransformation:
         """
         Helper method to create AST transformations
@@ -340,6 +341,7 @@ class BaseMigration(ABC):
             replacement: Replacement pattern
             description: Human-readable description
             file_patterns: File patterns to apply to (defaults to *.rs)
+            callback: Optional Python callback to handle complex logic
             
         Returns:
             ASTTransformation object
@@ -348,7 +350,8 @@ class BaseMigration(ABC):
             pattern=pattern,
             replacement=replacement,
             description=description,
-            file_patterns=file_patterns
+            file_patterns=file_patterns,
+            callback=callback
         )
     
     def find_files_with_pattern(self, search_pattern: str) -> List[Path]:
