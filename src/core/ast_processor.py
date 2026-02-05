@@ -23,7 +23,7 @@ class ASTTransformation:
     description: str
     file_patterns: List[str] = None
     # New fields for complex logic
-    callback: Optional[Callable[[Dict[str, str], Path], str]] = None
+    callback: Optional[Callable[[Dict[str, str], Path, Dict[str, Any]], str]] = None
     rule_yaml: Optional[str] = None
     
     def __post_init__(self):
@@ -126,7 +126,8 @@ class ASTProcessor:
         """Process a single file with the given transformations"""
         try:
             # Read original content
-            original_content = file_path.read_text(encoding='utf-8')
+            with open(file_path, 'r', encoding='utf-8', newline='') as f:
+                original_content = f.read()
             transformed_content = original_content
             applied_transformations = []
             
@@ -146,7 +147,8 @@ class ASTProcessor:
             
             # Write transformed content if not in dry run mode
             if not self.dry_run and transformed_content != original_content:
-                file_path.write_text(transformed_content, encoding='utf-8')
+                with open(file_path, 'w', encoding='utf-8', newline='') as f:
+                    f.write(transformed_content)
                 self.logger.info(f"Updated file: {file_path}")
             
             return TransformationResult(
@@ -217,8 +219,8 @@ class ASTProcessor:
         """Apply transformation using ast-grep"""
         try:
             # Create temporary files for ast-grep
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.rs', delete=False) as temp_file:
-                temp_file.write(content)
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.rs', delete=False) as temp_file:
+                temp_file.write(content.encode('utf-8'))
                 temp_file_path = temp_file.name
             
             try:
@@ -263,7 +265,7 @@ class ASTProcessor:
                                     for var_name, var_data in mvars['single'].items():
                                         meta_vars[var_name] = var_data['text']
                             
-                            replacement = transformation.callback(meta_vars, file_path)
+                            replacement = transformation.callback(meta_vars, file_path, match)
                             replacement_bytes = replacement.encode('utf-8')
                             
                             start_byte = match['range']['byteOffset']['start']
