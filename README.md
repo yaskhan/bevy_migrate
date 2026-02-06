@@ -63,48 +63,48 @@ bevymigrate /path/to/bevy/project --dry-run
 
 ```bash
 # Migrate project to the latest supported version (0.18)
-python src/main.py /path/to/your/bevy/project
+bevymigrate /path/to/your/bevy/project
 
 # Migrate to a specific version
-python src/main.py /path/to/your/bevy/project --target-version 0.17
+bevymigrate /path/to/your/bevy/project --target-version 0.17
 
 # Preview changes without modifying files
-python src/main.py /path/to/your/bevy/project --dry-run
+bevymigrate /path/to/your/bevy/project --dry-run
 
 # Verbose output with debug information
-python src/main.py /path/to/your/bevy/project --verbose
+bevymigrate /path/to/your/bevy/project --verbose
 ```
 
 ### Advanced Options
 
 ```bash
 # Migrate with custom backup directory
-python src/main.py /path/to/project --backup-dir ./my_backups
+bevymigrate /path/to/project --backup-dir ./my_backups
 
 # Force migration (if version is not detected automatically)
-python src/main.py /path/to/project --force
+bevymigrate /path/to/project --force
 
 # Exclude specific files or directories
-python src/main.py /path/to/project --exclude "target/**" "*.bak" "custom_dir/**"
+bevymigrate /path/to/project --exclude "target/**" "*.bak" "custom_dir/**"
 
 # Combined example
-python src/main.py ./my_bevy_game --target-version 0.17 --dry-run --verbose --backup-dir ./backups
+bevymigrate ./my_bevy_game --target-version 0.17 --dry-run --verbose --backup-dir ./backups
 ```
 
 ### Command Examples
 
 ```bash
 # Example 1: Migrate a simple project
-python src/main.py ./my_game
+bevymigrate ./my_game
 
 # Example 2: Preview migration with verbose output
-python src/main.py ./my_game --dry-run --verbose
+bevymigrate ./my_game --dry-run --verbose
 
 # Example 3: Step-by-step migration to version 0.16
-python src/main.py ./my_game --target-version 0.16
+bevymigrate ./my_game --target-version 0.16
 
 # Example 4: Migration with custom settings
-python src/main.py ./my_game --backup-dir ./project_backups --exclude "assets/**" --verbose
+bevymigrate ./my_game --backup-dir ./project_backups --exclude "assets/**" --verbose
 ```
 
 ## 📖 How to Use
@@ -127,12 +127,12 @@ python src/main.py ./my_game --backup-dir ./project_backups --exclude "assets/**
 
 3. **Run migration in preview mode**
    ```bash
-   python src/main.py . --dry-run --verbose
+   bevymigrate . --dry-run --verbose
    ```
 
 4. **Execute migration**
    ```bash
-   python src/main.py .
+   bevymigrate .
    ```
 
 5. **Verify results**
@@ -163,27 +163,27 @@ python src/main.py ./my_game --backup-dir ./project_backups --exclude "assets/**
 
 ```
 src/
-├── main.py                     # Application entry point
-├── core/                       # Core components
-│   ├── migration_engine.py     # Migration engine
-│   ├── ast_processor.py        # AST processor
-│   └── file_manager.py         # File manager
-├── migrations/                 # Migration modules
-│   ├── base_migration.py       # Base migration class
-│   ├── v0_12_to_0_13.py       # Migration 0.12 → 0.13
-│   ├── v0_13_to_0_14.py       # Migration 0.13 → 0.14
-│   ├── v0_14_to_0_15_part1.py # Migration 0.14 → 0.15 Part 1 (Core API)
-│   ├── v0_14_to_0_15_part2.py # Migration 0.14 → 0.15 Part 2 (Required Components)
-│   ├── v0_15_to_0_16.py       # Migration 0.15 → 0.16 (72 transformations)
-│   ├── v0_16_to_0_17_part1.py # Migration 0.16 → 0.17 Part 1 (Event/Message split)
-│   ├── v0_16_to_0_17_part2.py # Migration 0.16 → 0.17 Part 2 (bevy_render reorganization)
-│   ├── v0_16_to_0_17_part3.py # Migration 0.16 → 0.17 Part 3 (Entity representation)
-│   ├── v0_17_to_0_18.py       # Migration 0.17 → 0.18 (105+ transformations)
-│   └── v0_18_to_0_19_part1.py # Migration 0.18 → 0.19 Part 1 (Core API renames)
-├── utils/                      # Utilities
-│   └── version_detector.py     # Version detection
-└── config/                     # Configuration
-    └── migration_rules.py      # Migration rules
+└── bevymigrate/
+    ├── __init__.py
+    ├── main.py                     # Application entry point
+    ├── core/                       # Core components
+    │   ├── migration_engine.py     # Migration engine
+    │   ├── ast_processor.py        # AST processor
+    │   └── file_manager.py         # File manager
+    ├── migrations/                 # Migration modules
+    │   ├── base_migration.py       # Base migration class
+    │   ├── v0_12_to_0_13.py        # Migration 0.12 → 0.13
+    │   ├── v0_13_to_0_14.py        # Migration 0.13 → 0.14
+    │   ├── v0_14_to_0_15_part1.py  # Migration 0.14 → 0.15 Part 1
+    │   ├── v0_14_to_0_15_part2.py  # Migration 0.14 → 0.15 Part 2
+    │   ├── v0_15_to_0_16.py        # Migration 0.15 → 0.16
+    │   ├── v0_16_to_0_17_part1.py  # Migration 0.16 → 0.17 Part 1
+    │   ├── v0_16_to_0_17_part2.py  # Migration 0.16 → 0.17 Part 2
+    │   ├── v0_16_to_0_17_part3.py  # Migration 0.16 → 0.17 Part 3
+    │   ├── v0_17_to_0_18.py        # Migration 0.17 → 0.18
+    │   └── v0_18_to_0_19_part1.py  # Migration 0.18 → 0.19 Part 1
+    └── utils/                      # Utilities
+        └── version_detector.py     # Version detection
 ```
 
 ### Core Components
