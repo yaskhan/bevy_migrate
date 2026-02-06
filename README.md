@@ -30,7 +30,7 @@ This tool automates the migration process for projects using the Bevy game engin
 ### Requirements
 
 - Python 3.7 or higher
-- ast-grep (recommended for better transformation accuracy)
+- ast-grep-py 0.40.5 and PyYAML (included in requirements.txt)
 - Rust project with Bevy Engine
 
 ### Installing Dependencies
@@ -40,19 +40,8 @@ This tool automates the migration process for projects using the Bevy game engin
 git clone <repository-url>
 cd bevy-migration-tool
 
-# Install Python dependencies
+# Install dependencies (includes ast-grep-py)
 pip install -r requirements.txt
-
-# Install ast-grep (optional but recommended)
-# On Windows:
-cargo install ast-grep
-
-# On macOS:
-brew install ast-grep
-
-# On Linux:
-cargo install ast-grep
-# or use your distribution's package manager
 ```
 
 ## 🚀 Usage
@@ -272,10 +261,9 @@ The tool provides detailed information about the migration process:
 
 ### Common Issues
 
-1. **ast-grep not found**
+1. **ast-grep-py not found**
    ```bash
-   # Install ast-grep
-   cargo install ast-grep
+   pip install -r requirements.txt
    ```
 
 2. **Cannot detect Bevy version**

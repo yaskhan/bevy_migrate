@@ -1,9 +1,8 @@
 # Bevy Engine Migration Tool - Python Dependencies
 # Requirements for migrating Bevy projects from version 0.15 to 0.18
 
-# Core Runtime Dependencies
-# None - The migration tool uses only the Python Standard Library.
-# Minimum Python Version: 3.7+
+ast-grep-py==0.40.5
+PyYAML>=6.0.1
 
 # Development and Testing Dependencies (Optional)
 # pytest>=7.4.0

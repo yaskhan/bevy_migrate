@@ -14,6 +14,19 @@ from typing import Dict, List, Optional, Any, Tuple, Callable
 
 from dataclasses import dataclass
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+    print("WARNING: PyYAML not found. Some features may not work.")
+
+try:
+    from ast_grep_py import SgRoot, SgNode
+except ImportError:
+    SgRoot = None
+    SgNode = None
+    print("WARNING: ast-grep-py not found. Some features may not work.")
+
 
 @dataclass
 class ASTTransformation:
@@ -66,22 +79,12 @@ class ASTProcessor:
         self.logger.info(f"Dry run mode: {dry_run}")
     
     def _check_ast_grep_availability(self) -> bool:
-        """Check if ast-grep is available in the system"""
-        try:
-            result = subprocess.run(
-                ["ast-grep", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            if result.returncode == 0:
-                self.logger.info(f"ast-grep available: {result.stdout.strip()}")
-                return True
-            else:
-                self.logger.warning("ast-grep not found, falling back to regex-based transformations")
-                return False
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
-            self.logger.warning("ast-grep not found, falling back to regex-based transformations")
+        """Check if ast-grep-py is available"""
+        if SgRoot is not None:
+            self.logger.info("ast-grep-py is available")
+            return True
+        else:
+            self.logger.warning("ast-grep-py not found, falling back to regex-based transformations")
             return False
     
     def apply_transformations(
@@ -216,101 +219,139 @@ class ASTProcessor:
         transformation: ASTTransformation,
         file_path: Path
     ) -> Optional[str]:
-        """Apply transformation using ast-grep"""
+        """Apply transformation using ast-grep-py"""
         try:
-            # Create temporary files for ast-grep
-            with tempfile.NamedTemporaryFile(mode='wb', suffix='.rs', delete=False) as temp_file:
-                temp_file.write(content.encode('utf-8'))
-                temp_file_path = temp_file.name
-            
-            try:
-                # If there's a callback, we need to find matches first
-                if transformation.callback:
-                    if transformation.rule_yaml:
-                        inline_rule = transformation.rule_yaml
-                        cmd = [
-                            "ast-grep",
-                            "scan",
-                            "--inline-rules", inline_rule,
-                            "--json",
-                            temp_file_path
-                        ]
-                    else:
-                        # Use 'run' for simple patterns as it's more permissive
-                        cmd = [
-                            "ast-grep",
-                            "run",
-                            "--pattern", transformation.pattern,
-                            "--json",
-                            temp_file_path,
-                            "--lang", "rust"
-                        ]
-                    
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-                    
-                    if result.returncode == 0:
-                        matches = json.loads(result.stdout)
-                        if not matches:
-                            return content
-                        
-                        content_bytes = content.encode('utf-8')
-                        matches.sort(key=lambda x: x['range']['byteOffset']['start'], reverse=True)
-                        
-                        new_content_bytes = content_bytes
-                        for match in matches:
-                            meta_vars = {"_matched_text": match.get('text', '')}
-                            if 'metaVariables' in match:
-                                mvars = match['metaVariables']
-                                if 'single' in mvars:
-                                    for var_name, var_data in mvars['single'].items():
-                                        meta_vars[var_name] = var_data['text']
-                            
-                            replacement = transformation.callback(meta_vars, file_path, match)
-                            replacement_bytes = replacement.encode('utf-8')
-                            
-                            start_byte = match['range']['byteOffset']['start']
-                            end_byte = match['range']['byteOffset']['end']
-                            new_content_bytes = new_content_bytes[:start_byte] + replacement_bytes + new_content_bytes[end_byte:]
-                        
-                        return new_content_bytes.decode('utf-8', errors='replace')
-                    else:
-                        self.logger.debug(f"ast-grep failed with code {result.returncode}: {result.stderr}")
-                        return None
+            if SgRoot is None:
+                return content
 
-                # Standard replacement if no callback
-                if transformation.rule_yaml:
-                    inline_rule = transformation.rule_yaml
+            # Parse the source code
+            # Note: We assume Rust for now as it's the primary language for Bevy migrations
+            # But we can extract language from file_path if needed
+            language = "rust"
+            if file_path.suffix == ".toml":
+                # ast-grep might not support TOML well through the Python API yet
+                # or we might need a different approach. For now, let's stick to .rs
+                return content
+            
+            root = SgRoot(content, language)
+            node = root.root()
+
+            # Prepare the rule
+            if not transformation.rule_yaml:
+                # If it's a bare word (identifier), use regex to match regardless of AST kind
+                # (e.g. both 'identifier' and 'type_identifier' in Rust)
+                if re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', transformation.pattern):
+                    rule_dict = {"regex": f"^{transformation.pattern}$"}
                 else:
-                    rule_obj = {
-                        "id": "migration-rule",
-                        "language": "rust",
-                        "rule": {
-                            "pattern": transformation.pattern
-                        },
-                        "fix": transformation.replacement
-                    }
-                    inline_rule = yaml.dump(rule_obj)
-                
-                result = subprocess.run([
-                    "ast-grep",
-                    "scan",
-                    "--inline-rules", inline_rule,
-                    "--update-all",
-                    temp_file_path
-                ], capture_output=True, text=True, timeout=30)
-                
-                if result.returncode == 0:
-                    return Path(temp_file_path).read_text(encoding='utf-8')
+                    rule_dict = {"pattern": transformation.pattern}
+            else:
+                rule_dict = {}
+                if yaml:
+                    rule_loaded = yaml.safe_load(transformation.rule_yaml)
+                    if isinstance(rule_loaded, dict):
+                        # Extract the 'rule' part if it's a full config
+                        rule_dict = rule_loaded.get("rule", rule_loaded)
+                    else:
+                        return content
                 else:
-                    self.logger.debug(f"ast-grep scan failed: {result.stderr}")
-                    return None
+                    self.logger.warning("PyYAML not found, cannot process complex rules")
+                    return content
+
+            if not transformation.callback:
+                # Simple replacement
+                # In ast-grep-py, we search and then manually replace using edits
+                
+                # Check if YAML rule has a 'fix'
+                replacement = transformation.replacement
+                if transformation.rule_yaml and not replacement:
+                    if yaml:
+                        rule_loaded = yaml.safe_load(transformation.rule_yaml)
+                        if isinstance(rule_loaded, dict) and "fix" in rule_loaded:
+                            replacement = rule_loaded["fix"]
+
+                matches = node.find_all(**rule_dict)
+                if not matches:
+                    return content
+
+                edits = []
+                for match in matches:
+                    curr_replacement = replacement
                     
-            finally:
-                Path(temp_file_path).unlink(missing_ok=True)
-                
+                    # Extract metavariables if present in replacement
+                    if "$" in curr_replacement:
+                        # Find all $VAR in replacement
+                        vars_in_replacement = re.findall(r'\$[A-Z][A-Za-z0-9]*|\$\$\$[A-Z][A-Za-z0-9]*', curr_replacement)
+                        for var in set(vars_in_replacement):
+                            var_name = var.lstrip('$')
+                            match_nodes = match.get_multiple_matches(var_name)
+                            if match_nodes:
+                                curr_replacement = curr_replacement.replace(var, "".join(m.text() for m in match_nodes))
+                            else:
+                                match_node = match.get_match(var_name)
+                                if match_node:
+                                    curr_replacement = curr_replacement.replace(var, match_node.text())
+                    
+                    edits.append(match.replace(curr_replacement))
+
+                return node.commit_edits(edits)
+
+            else:
+                # With callback
+                matches = node.find_all(**rule_dict)
+                if not matches:
+                    return content
+
+                edits = []
+                import inspect
+                try:
+                    sig = inspect.signature(transformation.callback)
+                    callback_args_count = len(sig.parameters)
+                except:
+                    callback_args_count = 3 # Default fallback
+
+                for match in matches:
+                    # Extract metavariables
+                    meta_vars = {"_matched_text": match.text()}
+                    
+                    # Try to extract potential vars from pattern/rule
+                    potential_vars = re.findall(r'\$[A-Z][A-Za-z0-9]*', transformation.pattern)
+                    if transformation.rule_yaml:
+                        potential_vars.extend(re.findall(r'\$[A-Z][A-Za-z0-9]*', transformation.rule_yaml))
+                    
+                    for var in set(potential_vars):
+                        var_name = var[1:]
+                        match_node = match.get_match(var_name)
+                        if match_node:
+                            meta_vars[var_name] = match_node.text()
+
+                    # Provide match range for compatibility
+                    rng = match.range()
+                    match_data = {
+                        'range': {
+                            'byteOffset': {
+                                'start': rng.start.index,
+                                'end': rng.end.index
+                            }
+                        }
+                    }
+                    
+                    # Call the callback with appropriate number of arguments
+                    if callback_args_count == 2:
+                        replacement = transformation.callback(meta_vars, file_path)
+                    else:
+                        replacement = transformation.callback(meta_vars, file_path, match_data)
+                    
+                    if replacement != match.text():
+                        edits.append(match.replace(replacement))
+
+                if not edits:
+                    return content
+                    
+                return node.commit_edits(edits)
+
         except Exception as e:
-            self.logger.debug(f"ast-grep transformation failed: {e}")
-            return None
+            self.logger.debug(f"ast-grep-py transformation failed: {e}", exc_info=True)
+            return content
     
     def _apply_regex_transformation(
         self,
@@ -319,16 +360,41 @@ class ASTProcessor:
     ) -> str:
         """Apply transformation using regex as fallback"""
         import re
-        
+
         try:
-            # Convert ast-grep pattern to regex (simplified approach)
-            pattern = self._convert_ast_pattern_to_regex(transformation.pattern)
-            replacement = transformation.replacement
+            # For simple patterns without metavariables, just use the original pattern
+            if not re.search(r'\$\w+', transformation.pattern):
+                # No metavariables, use the pattern as-is
+                pattern = re.escape(transformation.pattern)
+                replacement = transformation.replacement
+            else:
+                # Convert ast-grep pattern to regex (simplified approach)
+                pattern = self._convert_ast_pattern_to_regex(transformation.pattern)
+                
+                # Convert replacement metavariables to regex group references
+                # We'll use a function for the replacement to handle metavariables properly
+                replacement_template = transformation.replacement
+                
+                # Count how many metavariables are in the pattern to map them to groups
+                metavariables = re.findall(r'\$[A-Z][A-Za-z0-9]*', transformation.pattern)
+                unique_vars = list(dict.fromkeys(metavariables))  # Preserve order, remove duplicates
+                
+                def replace_func(match):
+                    result = replacement_template
+                    for i, var in enumerate(unique_vars):
+                        group_num = i + 1
+                        if group_num <= len(match.groups()):
+                            result = result.replace(var, match.group(group_num))
+                    return result
+                
+                # Apply regex substitution with the function
+                transformed_content = re.sub(pattern, replace_func, content, flags=re.MULTILINE)
+                return transformed_content
             
-            # Apply regex substitution
+            # Apply regex substitution for simple patterns
             transformed_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
             return transformed_content
-            
+
         except Exception as e:
             self.logger.warning(f"Regex transformation failed: {e}")
             return content
@@ -338,21 +404,29 @@ class ASTProcessor:
         Convert ast-grep pattern to regex pattern (simplified)
         This is a basic conversion for common patterns
         """
-        # This is a simplified conversion - in practice, you'd need more sophisticated parsing
+        import re
+        
+        # First, temporarily replace metavariables with placeholders
+        placeholders = {}
+        counter = 0
         pattern = ast_pattern
         
-        # Replace common ast-grep metavariables with regex groups
-        pattern = pattern.replace("$_", r"(\w+)")
-        pattern = pattern.replace("$$$", r"(.*?)")
+        # Find all $VAR patterns and replace with placeholders
+        matches = re.findall(r'\$[A-Z][A-Za-z0-9]*', ast_pattern)
+        for match in set(matches):  # Use set to get unique matches
+            placeholder = f"__PLACEHOLDER_{counter}__"
+            placeholders[placeholder] = r"([^<>]+)"  # Generic capture group
+            pattern = pattern.replace(match, placeholder)
+            counter += 1
         
-        # Escape special regex characters that might be in Rust code
-        pattern = re.escape(pattern)
+        # Now escape the entire pattern
+        escaped_pattern = re.escape(pattern)
         
-        # Restore the regex groups we want
-        pattern = pattern.replace(r"\(\\\w\+\)", r"(\w+)")
-        pattern = pattern.replace(r"\(\.\*\?\)", r"(.*?)")
+        # Replace placeholders back with regex capture groups
+        for placeholder, replacement in placeholders.items():
+            escaped_pattern = escaped_pattern.replace(re.escape(placeholder), replacement)
         
-        return pattern
+        return escaped_pattern
     
     def create_bevy_transformation(
         self,
