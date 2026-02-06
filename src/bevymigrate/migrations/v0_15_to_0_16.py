@@ -83,6 +83,13 @@ class Migration_0_15_to_0_16(BaseMigration):
             if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", func_snippet):
                 return f"#[require({type_snippet} = {func_snippet}())]"
             return f"#[require({type_snippet} = {func_snippet})]"
+
+        def child_of_deref_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            var_name = vars.get("VAR", "").strip()
+            # Only match if the variable name is parent, child_of (case insensitive)
+            if re.search(r'(?i)^(parent|child_of)$', var_name):
+                return f"{var_name}.parent()"
+            return vars.get("_matched_text", f"*{var_name}")
         
         # ===== ACCESSIBILITY =====
         
@@ -243,9 +250,10 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 18. ChildOf Deref removed
         transformations.append(self.create_transformation(
-            pattern="*$CHILD_OF",
-            replacement="$CHILD_OF.parent()",
-            description="ChildOf Deref removed, use parent() method"
+            pattern="*$VAR",
+            replacement="",
+            description="ChildOf Deref removed, use parent() method",
+            callback=child_of_deref_callback
         ))
         
         # 19. despawn_recursive is now default despawn

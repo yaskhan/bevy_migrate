@@ -426,7 +426,7 @@ class ASTProcessor:
         # 1. Replace metavariables with placeholders to protect them from escape
         placeholders = {}
         # Support $VAR and $$$VAR
-        metavariables = re.findall(r'\$\$?\$?[A-Z][A-Za-z0-9]*', ast_pattern)
+        metavariables = re.findall(r'\$\$?\$?[A-Z][A-Za-z0-9_]*', ast_pattern)
         unique_vars = list(dict.fromkeys(metavariables))
         
         pattern = ast_pattern
