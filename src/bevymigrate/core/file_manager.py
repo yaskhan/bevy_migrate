@@ -53,6 +53,9 @@ class FileManager:
         self.exclude_patterns = exclude_patterns or []
         self.logger = logging.getLogger(__name__)
         
+        # Keep track of logged exclusions to avoid redundant messages
+        self._logged_exclusions: Set[str] = set()
+        
         # Default exclude patterns for Rust/Bevy projects
         self.default_excludes = [
             'target/**',
@@ -249,17 +252,48 @@ class FileManager:
             # Get relative path for pattern matching
             relative_path = file_path.relative_to(self.project_path)
             relative_str = str(relative_path).replace('\\', '/')  # Normalize path separators
-            
-            # Check against exclude patterns
-            for pattern in self.all_exclude_patterns:
-                # Handle different pattern types
-                if fnmatch.fnmatch(relative_str, pattern):
-                    self.logger.debug(f"Excluding file {relative_str} (matches pattern: {pattern})")
+
+            # 1. Check if any parent directory was already logged as excluded
+            # This dramatically reduces log noise for excluded folders
+            for parent in relative_path.parents:
+                parent_str = str(parent).replace('\\', '/')
+                if parent_str != '.' and parent_str in self._logged_exclusions:
                     return False
+            
+            # 2. Check against exclude patterns
+            for pattern in self.all_exclude_patterns:
+                matched = False
+                match_type = ""
                 
-                # Also check the filename alone
-                if fnmatch.fnmatch(file_path.name, pattern):
-                    self.logger.debug(f"Excluding file {relative_str} (filename matches pattern: {pattern})")
+                if fnmatch.fnmatch(relative_str, pattern):
+                    matched = True
+                    match_type = "matches pattern"
+                elif fnmatch.fnmatch(file_path.name, pattern):
+                    matched = True
+                    match_type = "filename matches pattern"
+                
+                if matched:
+                    # Determine what to log
+                    log_path = relative_str
+                    log_target = "file"
+                    
+                    # If it looks like a directory-style exclusion, try to log the directory once
+                    if '/**' in pattern or '/' in pattern:
+                        parts = relative_str.split('/')
+                        # Check path parts to see if any of them (as directories) trigger the exclusion
+                        for i in range(len(parts)):
+                            check_path = '/'.join(parts[:i+1])
+                            # If this sub-path matches the pattern or any placeholder under it matches
+                            if fnmatch.fnmatch(check_path, pattern) or fnmatch.fnmatch(check_path + "/placeholder", pattern):
+                                log_path = check_path
+                                log_target = "directory"
+                                break
+                    
+                    # Log only if we haven't logged this path (or a parent) yet
+                    if log_path != '.' and log_path not in self._logged_exclusions:
+                        self.logger.debug(f"Excluding {log_target} {log_path} ({match_type}: {pattern})")
+                        self._logged_exclusions.add(log_path)
+                    
                     return False
             
             return True
