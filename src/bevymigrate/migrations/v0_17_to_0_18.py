@@ -43,6 +43,70 @@ class Migration_0_17_to_0_18(BaseMigration):
     
     def get_transformations(self) -> List[ASTTransformation]:
         transformations = []
+
+        def animation_target_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            full = vars.get("_matched_text", "")
+            # Extract fields from AnimationTarget { id: ..., player: ... }
+            # Matches both possible orders and handle nested AnimationTargetId
+            id_m = re.search(r"id:\s*(AnimationTargetId\([^)]+\)|[^,\s{}]+)", full)
+            player_m = re.search(r"player:\s*([^,\s{}]+)", full)
+            
+            if id_m and player_m:
+                id_val = id_m.group(1).strip()
+                player_val = player_m.group(1).strip()
+                
+                if not id_val.startswith("AnimationTargetId"):
+                    id_val = f"AnimationTargetId({id_val})"
+                
+                return f"({id_val}, AnimatedBy({player_val}))"
+            return full
+
+        def render_target_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            full = vars.get("_matched_text", "")
+            # Extract content between Camera { and }
+            inner_m = re.search(r"Camera\s*\{\s*(.*)\s*\}", full, re.DOTALL)
+            if not inner_m:
+                return full
+            inner = inner_m.group(1).strip()
+            
+            # Split by comma balancing () and {}
+            items = []
+            curr = ""
+            d = 0
+            for c in inner:
+                if c in '({': d += 1
+                elif c in ')}': d -= 1
+                if c == ',' and d == 0:
+                    items.append(curr.strip())
+                    curr = ""
+                else:
+                    curr += c
+            if curr.strip():
+                items.append(curr.strip())
+            
+            target_val = None
+            remaining_items = []
+            for item in items:
+                if item.startswith("target:"):
+                    target_val = item[len("target:"):].strip()
+                else:
+                    remaining_items.append(item)
+            
+            if not target_val:
+                return full
+            
+            # Filter out ..default() from remaining items to check if anything else exists
+            subst_items = []
+            for it in remaining_items:
+                clean_it = it.strip()
+                if clean_it and clean_it != "..default()":
+                    subst_items.append(clean_it)
+            
+            if not subst_items:
+                return target_val
+            else:
+                rest_str = ", ".join(remaining_items)
+                return f"(Camera {{ {rest_str} }}, {target_val})"
         
         # ===== ENTITY API CHANGES (15 transformations) =====
         
@@ -122,6 +186,13 @@ class Migration_0_17_to_0_18(BaseMigration):
             pattern="$ENTITY.animation_player",
             replacement="$ENTITY.target",
             description="AnimationEventTrigger.animation_player → target"
+        ))
+        
+        transformations.append(self.create_transformation(
+            pattern="AnimationTarget { $$$ }",
+            replacement="",
+            description="AnimationTarget split into AnimationTargetId and AnimatedBy",
+            callback=animation_target_callback
         ))
         
         # ===== FEATURE RENAMES (5 transformations) =====
@@ -288,9 +359,10 @@ class Migration_0_17_to_0_18(BaseMigration):
         
         # Camera RenderTarget now component
         transformations.append(self.create_transformation(
-            pattern="Camera { target: RenderTarget::",
-            replacement="// RenderTarget is now a component, spawn separately",
-            description="RenderTarget moved from Camera field to component"
+            pattern="Camera { $$$ }",
+            replacement="",
+            description="RenderTarget moved from Camera field to component",
+            callback=render_target_callback
         ))
         
         transformations.append(self.create_transformation(
@@ -325,15 +397,22 @@ class Migration_0_17_to_0_18(BaseMigration):
 id: ambient-light-resource
 language: rust
 rule:
-  kind: call_expression
-  pattern: app.insert_resource(AmbientLight { $$$ARGS })
-fix: app.insert_resource(GlobalAmbientLight { $$$ARGS })
+  any:
+    - pattern: $OBJ.insert_resource(AmbientLight { $$$ARGS })
+    - pattern: $OBJ.insert_resource(AmbientLight::default())
+fix: $OBJ.insert_resource(GlobalAmbientLight { $$$ARGS })
 """
         transformations.append(self.create_transformation(
             pattern="",
             replacement="",
             description="AmbientLight resource → GlobalAmbientLight",
             rule_yaml=ambient_light_rule
+        ))
+
+        transformations.append(self.create_transformation(
+            pattern=".init_resource::<AmbientLight>()",
+            replacement=".init_resource::<GlobalAmbientLight>()",
+            description="init_resource::<AmbientLight> → GlobalAmbientLight"
         ))
         
         transformations.append(self.create_transformation(

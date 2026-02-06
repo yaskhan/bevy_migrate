@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [
-    { name = "Yaskhan", email = "yaskhan@example.com" }
+    { name = "Yaskhan", email = "yaskhan@mail.ru" }
 ]
 dependencies = [
     "ast-grep-py>=0.11.0",
