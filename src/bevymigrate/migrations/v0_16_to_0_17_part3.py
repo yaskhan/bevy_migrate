@@ -13,8 +13,8 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Callable
 
-from migrations.base_migration import BaseMigration, MigrationResult
-from core.ast_processor import ASTTransformation
+from bevymigrate.migrations.base_migration import BaseMigration, MigrationResult
+from bevymigrate.core.ast_processor import ASTTransformation
 
 
 class Migration_0_16_to_0_17_Part3(BaseMigration):

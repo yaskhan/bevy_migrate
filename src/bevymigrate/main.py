@@ -10,8 +10,8 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from core.migration_engine import MigrationEngine
-from utils.version_detector import VersionDetector
+from bevymigrate.core.migration_engine import MigrationEngine
+from bevymigrate.utils.version_detector import VersionDetector
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -33,10 +33,10 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python src/main.py /path/to/bevy/project
-  python src/main.py /path/to/bevy/project --target-version 0.17
-  python src/main.py /path/to/bevy/project --dry-run --verbose
-  python src/main.py /path/to/bevy/project --backup-dir ./backups
+  bevymigrate /path/to/bevy/project
+  bevymigrate /path/to/bevy/project --target-version 0.17
+  bevymigrate /path/to/bevy/project --dry-run --verbose
+  bevymigrate /path/to/bevy/project --backup-dir ./backups
         """
     )
     

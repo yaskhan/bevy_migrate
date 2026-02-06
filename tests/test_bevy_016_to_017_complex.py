@@ -7,11 +7,11 @@ import shutil
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from migrations.v0_16_to_0_17_part1 import Migration_0_16_to_0_17_Part1
-from migrations.v0_16_to_0_17_part2 import Migration_0_16_to_0_17_Part2
-from migrations.v0_16_to_0_17_part3 import Migration_0_16_to_0_17_Part3
-from core.ast_processor import ASTProcessor
-from core.file_manager import FileManager
+from bevymigrate.migrations.v0_16_to_0_17_part1 import Migration_0_16_to_0_17_Part1
+from bevymigrate.migrations.v0_16_to_0_17_part2 import Migration_0_16_to_0_17_Part2
+from bevymigrate.migrations.v0_16_to_0_17_part3 import Migration_0_16_to_0_17_Part3
+from bevymigrate.core.ast_processor import ASTProcessor
+from bevymigrate.core.file_manager import FileManager
 
 
 class TestBevy016To017Part1Complex(unittest.TestCase):

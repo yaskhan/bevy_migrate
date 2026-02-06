@@ -9,18 +9,18 @@ from pathlib import Path
 from typing import Dict, List, Optional, Type
 from datetime import datetime
 
-from migrations.base_migration import BaseMigration
-from migrations.v0_12_to_0_13 import Migration_0_12_to_0_13
-from migrations.v0_13_to_0_14 import Migration_0_13_to_0_14
-from migrations.v0_14_to_0_15_part1 import Migration_0_14_to_0_15_Part1
-from migrations.v0_14_to_0_15_part2 import Migration_0_14_to_0_15_Part2
-from migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
-from migrations.v0_16_to_0_17_part1 import Migration_0_16_to_0_17_Part1
-from migrations.v0_16_to_0_17_part2 import Migration_0_16_to_0_17_Part2
-from migrations.v0_16_to_0_17_part3 import Migration_0_16_to_0_17_Part3
-from migrations.v0_17_to_0_18 import Migration_0_17_to_0_18
-from core.file_manager import FileManager
-from utils.version_detector import VersionDetector
+from bevymigrate.migrations.base_migration import BaseMigration
+from bevymigrate.migrations.v0_12_to_0_13 import Migration_0_12_to_0_13
+from bevymigrate.migrations.v0_13_to_0_14 import Migration_0_13_to_0_14
+from bevymigrate.migrations.v0_14_to_0_15_part1 import Migration_0_14_to_0_15_Part1
+from bevymigrate.migrations.v0_14_to_0_15_part2 import Migration_0_14_to_0_15_Part2
+from bevymigrate.migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
+from bevymigrate.migrations.v0_16_to_0_17_part1 import Migration_0_16_to_0_17_Part1
+from bevymigrate.migrations.v0_16_to_0_17_part2 import Migration_0_16_to_0_17_Part2
+from bevymigrate.migrations.v0_16_to_0_17_part3 import Migration_0_16_to_0_17_Part3
+from bevymigrate.migrations.v0_17_to_0_18 import Migration_0_17_to_0_18
+from bevymigrate.core.file_manager import FileManager
+from bevymigrate.utils.version_detector import VersionDetector
 
 
 class MigrationEngine:

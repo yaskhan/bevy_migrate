@@ -27,26 +27,35 @@ This tool automates the migration process for projects using the Bevy game engin
 
 ## 🛠️ Installation
 
-### Requirements
-
-- Python 3.7 or higher
-- ast-grep-py 0.40.5 and PyYAML (included in requirements.txt)
-- Rust project with Bevy Engine
-
-### Installing Dependencies
+### Installing the Package
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd bevy-migration-tool
 
-# Install dependencies (includes ast-grep-py)
-pip install -r requirements.txt
+# Install the package in editable mode (recommend for development)
+pip install -e .
+
+# Or install normally
+pip install .
 ```
+
+This will install the `bevymigrate` package and the `bevymigrate` CLI command.
 
 ## 🚀 Usage
 
 ### Basic Usage
+
+After installation, you can run the tool directly using the `bevymigrate` command:
+
+```bash
+# Run migration on your project (0.18 is default target)
+bevymigrate /path/to/bevy/project
+
+# Run a dry-run to see what would change
+bevymigrate /path/to/bevy/project --dry-run
+```
 
 ```bash
 # Migrate project to the latest supported version (0.18)

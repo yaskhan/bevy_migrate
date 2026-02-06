@@ -6,9 +6,9 @@ import shutil
 
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
-from core.ast_processor import ASTProcessor
-from core.file_manager import FileManager
+from bevymigrate.migrations.v0_15_to_0_16 import Migration_0_15_to_0_16
+from bevymigrate.core.ast_processor import ASTProcessor
+from bevymigrate.core.file_manager import FileManager
 
 
 class TestBevy015To016ComplexLogic(unittest.TestCase):

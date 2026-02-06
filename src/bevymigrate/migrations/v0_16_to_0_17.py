@@ -7,8 +7,8 @@ import logging
 from pathlib import Path
 from typing import List
 
-from migrations.base_migration import BaseMigration
-from core.ast_processor import ASTTransformation
+from bevymigrate.migrations.base_migration import BaseMigration
+from bevymigrate.core.ast_processor import ASTTransformation
 
 
 class Migration_0_16_to_0_17(BaseMigration):

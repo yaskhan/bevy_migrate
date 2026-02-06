@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
-from core.file_manager import FileManager
-from core.ast_processor import ASTProcessor, ASTTransformation
+from bevymigrate.core.file_manager import FileManager
+from bevymigrate.core.ast_processor import ASTProcessor, ASTTransformation
 
 
 @dataclass

@@ -2,8 +2,8 @@ import re
 import sys
 from typing import List
 
-from core.ast_processor import ASTTransformation
-from migrations.base_migration import BaseMigration
+from bevymigrate.core.ast_processor import ASTTransformation
+from bevymigrate.migrations.base_migration import BaseMigration
 
 
 class Migration_0_18_to_0_19_Part1(BaseMigration):

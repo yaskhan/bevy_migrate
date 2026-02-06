@@ -7,9 +7,9 @@ import shutil
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from migrations.v0_18_to_0_19_part1 import Migration_0_18_to_0_19_Part1
-from core.ast_processor import ASTProcessor
-from core.file_manager import FileManager
+from bevymigrate.migrations.v0_18_to_0_19_part1 import Migration_0_18_to_0_19_Part1
+from bevymigrate.core.ast_processor import ASTProcessor
+from bevymigrate.core.file_manager import FileManager
 
 class TestBevy019Part1ComplexLogic(unittest.TestCase):
     def setUp(self):

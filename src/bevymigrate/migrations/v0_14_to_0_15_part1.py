@@ -9,8 +9,8 @@ import re
 from pathlib import Path
 from typing import List
 
-from migrations.base_migration import BaseMigration, MigrationResult
-from core.ast_processor import ASTTransformation
+from bevymigrate.migrations.base_migration import BaseMigration, MigrationResult
+from bevymigrate.core.ast_processor import ASTTransformation
 
 
 class Migration_0_14_to_0_15_Part1(BaseMigration):
