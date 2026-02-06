@@ -206,12 +206,10 @@ class ASTProcessor:
                 # Fallback to regex if ast-grep failed
             
             # Fallback to regex-based transformation
-            if not transformation.callback:
-                return self._apply_regex_transformation(content, transformation)
-            return None
+            return self._apply_regex_transformation(content, transformation, file_path)
         except Exception as e:
             self.logger.warning(f"AST transformation failed, falling back to regex: {e}")
-            return self._apply_regex_transformation(content, transformation)
+            return self._apply_regex_transformation(content, transformation, file_path)
     
     def _apply_ast_grep_transformation(
         self,
@@ -222,16 +220,14 @@ class ASTProcessor:
         """Apply transformation using ast-grep-py"""
         try:
             if SgRoot is None:
-                return content
+                return None
 
             # Parse the source code
             # Note: We assume Rust for now as it's the primary language for Bevy migrations
             # But we can extract language from file_path if needed
             language = "rust"
             if file_path.suffix == ".toml":
-                # ast-grep might not support TOML well through the Python API yet
-                # or we might need a different approach. For now, let's stick to .rs
-                return content
+                return None
             
             root = SgRoot(content, language)
             node = root.root()
@@ -252,10 +248,10 @@ class ASTProcessor:
                         # Extract the 'rule' part if it's a full config
                         rule_dict = rule_loaded.get("rule", rule_loaded)
                     else:
-                        return content
+                        return None
                 else:
                     self.logger.warning("PyYAML not found, cannot process complex rules")
-                    return content
+                    return None
 
             if not transformation.callback:
                 # Simple replacement
@@ -271,7 +267,7 @@ class ASTProcessor:
 
                 matches = node.find_all(**rule_dict)
                 if not matches:
-                    return content
+                    return None
 
                 edits = []
                 for match in matches:
@@ -294,12 +290,11 @@ class ASTProcessor:
                     edits.append(match.replace(curr_replacement))
 
                 return node.commit_edits(edits)
-
             else:
                 # With callback
                 matches = node.find_all(**rule_dict)
                 if not matches:
-                    return content
+                    return None
 
                 edits = []
                 import inspect
@@ -345,54 +340,74 @@ class ASTProcessor:
                         edits.append(match.replace(replacement))
 
                 if not edits:
-                    return content
+                    return None
                     
                 return node.commit_edits(edits)
 
         except Exception as e:
             self.logger.debug(f"ast-grep-py transformation failed: {e}", exc_info=True)
-            return content
+            return None
     
     def _apply_regex_transformation(
         self,
         content: str,
-        transformation: ASTTransformation
+        transformation: ASTTransformation,
+        file_path: Optional[Path] = None
     ) -> str:
         """Apply transformation using regex as fallback"""
         import re
 
         try:
-            # For simple patterns without metavariables, just use the original pattern
-            if not re.search(r'\$\w+', transformation.pattern):
-                # No metavariables, use the pattern as-is
-                pattern = re.escape(transformation.pattern)
-                replacement = transformation.replacement
-            else:
-                # Convert ast-grep pattern to regex (simplified approach)
-                pattern = self._convert_ast_pattern_to_regex(transformation.pattern)
+            # Count how many metavariables are in the pattern to map them to groups
+            metavariables = re.findall(r'\$\$?\$?[A-Z][A-Za-z0-9]*', transformation.pattern)
+            unique_vars = list(dict.fromkeys(metavariables))  # Preserve order, remove duplicates
+            
+            # Convert ast-grep pattern to regex (simplified approach)
+            pattern_regex = self._convert_ast_pattern_to_regex(transformation.pattern)
+            
+            def replace_func(match):
+                # Extract variables from groups
+                meta_vars = {"_matched_text": match.group(0)}
+                for i, var in enumerate(unique_vars):
+                    group_num = i + 1
+                    if group_num <= len(match.groups()):
+                        var_name = var.lstrip('$')
+                        meta_vars[var_name] = match.group(group_num)
                 
-                # Convert replacement metavariables to regex group references
-                # We'll use a function for the replacement to handle metavariables properly
-                replacement_template = transformation.replacement
-                
-                # Count how many metavariables are in the pattern to map them to groups
-                metavariables = re.findall(r'\$[A-Z][A-Za-z0-9]*', transformation.pattern)
-                unique_vars = list(dict.fromkeys(metavariables))  # Preserve order, remove duplicates
-                
-                def replace_func(match):
-                    result = replacement_template
+                if transformation.callback:
+                    # Callback support
+                    import inspect
+                    try:
+                        sig = inspect.signature(transformation.callback)
+                        callback_args_count = len(sig.parameters)
+                    except:
+                        callback_args_count = 3
+
+                    # Provide match data for compatibility
+                    match_data = {
+                        'range': {
+                            'byteOffset': {
+                                'start': match.start(),
+                                'end': match.end()
+                            }
+                        }
+                    }
+                    
+                    if callback_args_count == 2:
+                        return transformation.callback(meta_vars, file_path)
+                    else:
+                        return transformation.callback(meta_vars, file_path, match_data)
+                else:
+                    # Simple replacement support
+                    result = transformation.replacement
                     for i, var in enumerate(unique_vars):
                         group_num = i + 1
                         if group_num <= len(match.groups()):
                             result = result.replace(var, match.group(group_num))
                     return result
-                
-                # Apply regex substitution with the function
-                transformed_content = re.sub(pattern, replace_func, content, flags=re.MULTILINE)
-                return transformed_content
             
-            # Apply regex substitution for simple patterns
-            transformed_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+            # Apply regex substitution with the function
+            transformed_content = re.sub(pattern_regex, replace_func, content, flags=re.MULTILINE)
             return transformed_content
 
         except Exception as e:
@@ -401,32 +416,48 @@ class ASTProcessor:
     
     def _convert_ast_pattern_to_regex(self, ast_pattern: str) -> str:
         """
-        Convert ast-grep pattern to regex pattern (simplified)
-        This is a basic conversion for common patterns
+        Convert ast-grep pattern to regex pattern (improved)
         """
+        if not ast_pattern:
+            return ""
+            
         import re
         
-        # First, temporarily replace metavariables with placeholders
+        # 1. Replace metavariables with placeholders to protect them from escape
         placeholders = {}
-        counter = 0
+        # Support $VAR and $$$VAR
+        metavariables = re.findall(r'\$\$?\$?[A-Z][A-Za-z0-9]*', ast_pattern)
+        unique_vars = list(dict.fromkeys(metavariables))
+        
         pattern = ast_pattern
+        for i, var in enumerate(unique_vars):
+            placeholder = f"__PVAR_{i}__"
+            placeholders[placeholder] = var
+            pattern = pattern.replace(var, placeholder)
+            
+        # 2. Escape the rest of the pattern
+        escaped = re.escape(pattern)
         
-        # Find all $VAR patterns and replace with placeholders
-        matches = re.findall(r'\$[A-Z][A-Za-z0-9]*', ast_pattern)
-        for match in set(matches):  # Use set to get unique matches
-            placeholder = f"__PLACEHOLDER_{counter}__"
-            placeholders[placeholder] = r"([^<>]+)"  # Generic capture group
-            pattern = pattern.replace(match, placeholder)
-            counter += 1
+        # 3. Replace placeholders with capture groups
+        # For $VAR we use ([^<>(){}]+) (simple capture)
+        # For $$$VAR we use (.*) (greedy capture)
+        for placeholder, var in placeholders.items():
+            if var.startswith("$$$"):
+                group = r"(.*)"
+            else:
+                # Use a match for $VAR that avoids crossing major boundaries like ( ) or :
+                # This prevents matching from the start of a function when we want a parameter
+                group = r"([^()<>:]+?)"
+                
+            escaped = escaped.replace(re.escape(placeholder), group)
+            
+        # 4. Make whitespace flexible
+        # Replace escaped spaces with \s+
+        escaped = re.sub(r'\\\s+', r'\\s+', escaped)
+        # Replace multiple \s+ with single \s+
+        escaped = re.sub(r'(\\s\+)+', r'\\s+', escaped)
         
-        # Now escape the entire pattern
-        escaped_pattern = re.escape(pattern)
-        
-        # Replace placeholders back with regex capture groups
-        for placeholder, replacement in placeholders.items():
-            escaped_pattern = escaped_pattern.replace(re.escape(placeholder), replacement)
-        
-        return escaped_pattern
+        return escaped
     
     def create_bevy_transformation(
         self,

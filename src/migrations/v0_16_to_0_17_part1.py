@@ -109,17 +109,11 @@ class Migration_0_16_to_0_17_Part1(BaseMigration):
         
         # ===== OBSERVER API CHANGES (15 transformations) =====
         
-        # 11. Trigger<E> → On<E> (parameter type)
+        # 11. Trigger<...> → On<...> (parameter type)
         transformations.append(self.create_transformation(
-            pattern="trigger: Trigger<$E>",
-            replacement="on: On<$E>",
+            pattern="trigger: Trigger<$$$ARGS>",
+            replacement="on: On<$$$ARGS>",
             description="Trigger parameter renamed to On"
-        ))
-        
-        transformations.append(self.create_transformation(
-            pattern="trigger: Trigger<$E, $F>",
-            replacement="on: On<$E, $F>",
-            description="Trigger with filter renamed to On"
         ))
         
         # 12-16. Lifecycle events renamed (OnAdd → Add, etc.)

@@ -7,7 +7,7 @@ rendering updates, utils refactor, and 100+ other breaking changes
 import logging
 import re
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
 
 from migrations.base_migration import BaseMigration, MigrationResult
 from core.ast_processor import ASTTransformation
@@ -50,6 +50,39 @@ class Migration_0_15_to_0_16(BaseMigration):
             List of ASTTransformation objects
         """
         transformations = []
+
+        def audio_sink_param_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            name = vars.get("NAME", "").strip()
+            if name.startswith("mut "):
+                name = name[len("mut "):].strip()
+            if not name:
+                name = "sink"
+            return f"mut {name}: Single<&mut AudioSink>"
+
+        def set_parent_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            full = vars.get("_matched_text", "")
+            if ".set_parent(" not in full:
+                return full
+            return re.sub(r"\.set_parent\(([^)]+)\)", r".insert(ChildOf(\1))", full)
+
+        def require_attribute_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            type_snippet = vars.get("TYPE", "").strip()
+            func_snippet = vars.get("FUNC", "").strip()
+            full = vars.get("_matched_text", "")
+            if not type_snippet or not func_snippet:
+                return full
+            if func_snippet.startswith("||"):
+                expr = func_snippet[2:].strip()
+                # If expr already contains the type constructor, use it directly
+                # e.g. || A(10) -> #[require(A(10))]
+                if expr.startswith(f"{type_snippet}(") or expr.startswith(f"{type_snippet} {{"):
+                     return f"#[require({expr})]"
+                return f"#[require({type_snippet}({expr}))]"
+            if re.match(rf"^{re.escape(type_snippet)}\s*\(", func_snippet):
+                return f"#[require({func_snippet})]"
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", func_snippet):
+                return f"#[require({type_snippet} = {func_snippet}())]"
+            return f"#[require({type_snippet} = {func_snippet})]"
         
         # ===== ACCESSIBILITY =====
         
@@ -69,10 +102,19 @@ class Migration_0_15_to_0_16(BaseMigration):
         # ===== ANIMATION =====
         
         # 2. EaseFunction::Steps now takes JumpAt parameter
+        ease_steps_rule = """
+id: ease-steps
+language: rust
+rule:
+  kind: call_expression
+  pattern: "EaseFunction::Steps($N)"
+fix: "EaseFunction::Steps($N, JumpAt::default())"
+"""
         transformations.append(self.create_transformation(
-            pattern="EaseFunction::Steps($N)",
-            replacement="EaseFunction::Steps($N, JumpAt::default())",
-            description="Add JumpAt parameter to EaseFunction::Steps"
+            pattern="",
+            replacement="",
+            description="Add JumpAt parameter to EaseFunction::Steps",
+            rule_yaml=ease_steps_rule
         ))
         
         # 3. CubicCurve::new_bezier renamed
@@ -95,9 +137,10 @@ class Migration_0_15_to_0_16(BaseMigration):
         
         # 5. AudioSinkPlayback::set_volume now takes &mut self
         transformations.append(self.create_transformation(
-            pattern="sink: Single<&AudioSink",
-            replacement="mut sink: Single<&mut AudioSink",
-            description="AudioSinkPlayback methods now require &mut self"
+            pattern="$NAME: Single<&AudioSink>",
+            replacement="",
+            description="AudioSinkPlayback methods now require &mut self",
+            callback=audio_sink_param_callback
         ))
         
         # 6. AudioSinkPlayback::toggle renamed
@@ -235,9 +278,10 @@ class Migration_0_15_to_0_16(BaseMigration):
         
         # 23. set_parent replaced with insert(ChildOf)
         transformations.append(self.create_transformation(
-            pattern="$COMMANDS.spawn_empty().set_parent($PARENT)",
-            replacement="$COMMANDS.spawn_empty().insert(ChildOf($PARENT))",
-            description="set_parent replaced with insert(ChildOf(parent))"
+            pattern="$TARGET.set_parent($PARENT)",
+            replacement="",
+            description="set_parent replaced with insert(ChildOf(parent))",
+            callback=set_parent_callback
         ))
         
         # 24. replace_children pattern
@@ -288,9 +332,10 @@ class Migration_0_15_to_0_16(BaseMigration):
         
         # 28. Required component syntax change
         transformations.append(self.create_transformation(
-            pattern="#[require($TYPE($FUNC))]",
-            replacement="#[require($TYPE = $FUNC())]",
-            description="Required component syntax: #[require(A(func))] → #[require(A = func())]"
+            pattern="#[require($TYPE($$$FUNC))]",
+            replacement="",
+            description="Required component syntax updated for 0.16",
+            callback=require_attribute_callback
         ))
         
         # 29. Component::register_component_hooks deprecated
