@@ -502,12 +502,17 @@ class ASTProcessor:
             True if valid, False otherwise
         """
         try:
+            # If rule_yaml is provided, it's considered valid (it contains its own pattern/fix)
+            if transformation.rule_yaml and transformation.rule_yaml.strip():
+                return True
+
             # Basic validation - check that pattern and replacement are not empty
             if not transformation.pattern.strip():
                 self.logger.error("Transformation pattern cannot be empty")
                 return False
             
-            if not transformation.replacement.strip():
+            # Replacement can be empty if there's a callback
+            if not transformation.replacement.strip() and not transformation.callback:
                 self.logger.error("Transformation replacement cannot be empty")
                 return False
             

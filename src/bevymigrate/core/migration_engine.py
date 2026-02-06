@@ -124,10 +124,6 @@ class MigrationEngine:
                     self.logger.error(f"Migration step {step_from} -> {step_to} failed")
                     return False
             
-            # Update project version if not in dry run mode
-            if not self.dry_run:
-                self._update_project_version(to_version)
-            
             self.logger.info(f"Migration from {from_version} to {to_version} completed successfully")
             return True
             
@@ -204,6 +200,9 @@ class MigrationEngine:
             success = migration.execute()
             if success:
                 self.logger.info(f"Migration step {migration_key} completed successfully")
+                # Update project version after each successful step
+                if not self.dry_run:
+                    self._update_project_version(to_version)
             else:
                 self.logger.error(f"Migration step {migration_key} failed")
             return success
@@ -272,32 +271,35 @@ class MigrationEngine:
                 self.logger.warning("Cargo.toml not found, cannot update version")
                 return
             
+            # If version is a part version (e.g. 0.15-part1), use the base version
+            clean_version = new_version.split('-')[0]
+            
             # Read current content
             content = cargo_toml_path.read_text(encoding='utf-8')
+            original_content = content
             
             # Update bevy dependency version
-            # This is a simple regex-based approach
             import re
             
-            # Pattern to match bevy dependency lines
+            # More robust patterns for Cargo.toml
             patterns = [
-                r'(bevy\s*=\s*")[^"]*(")',  # bevy = "0.15"
-                r'(bevy\s*=\s*\{\s*version\s*=\s*")[^"]*(")',  # bevy = { version = "0.15" }
+                # bevy = "0.15" or bevy = '0.15'
+                (r'(\bbevy\s*=\s*["\'])[^"\']*(["\'])', rf'\g<1>{clean_version}\g<2>'),
+                # bevy = { version = "0.15" }
+                (r'(\bbevy\s*=\s*\{[^}]*version\s*=\s*["\'])[^"\']*(["\'])', rf'\g<1>{clean_version}\g<2>'),
             ]
             
-            updated = False
-            for pattern in patterns:
-                if re.search(pattern, content):
-                    content = re.sub(pattern, f'\\g<1>{new_version}\\g<2>', content)
-                    updated = True
+            for pattern, replacement in patterns:
+                content = re.sub(pattern, replacement, content)
             
-            if updated:
+            if content != original_content:
                 cargo_toml_path.write_text(content, encoding='utf-8')
-                self.logger.info(f"Updated Cargo.toml with Bevy version {new_version}")
+                self.logger.info(f"Updated Cargo.toml to Bevy {clean_version}")
             else:
-                self.logger.warning("Could not find Bevy dependency in Cargo.toml to update")
+                self.logger.debug(f"Cargo.toml already at version {clean_version} or Bevy dependency not found")
                 
         except Exception as e:
+            self.logger.error(f"Failed to update project version: {e}", exc_info=True)
             self.logger.error(f"Failed to update project version: {e}", exc_info=True)
     
     def get_available_migrations(self) -> List[str]:

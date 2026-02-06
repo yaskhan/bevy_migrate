@@ -814,24 +814,12 @@ rule:
     
     def post_migration_steps(self, result: MigrationResult) -> bool:
         try:
-            # Update Cargo.toml
-            self.logger.info("Updating Cargo.toml to Bevy 0.18...")
+            # Additional Cargo.toml tweaks for 0.18
             cargo_toml_path = self.file_manager.find_cargo_toml()
             
             if cargo_toml_path:
                 content = cargo_toml_path.read_text(encoding='utf-8')
-                
-                # Update Bevy version
-                content = re.sub(
-                    r'bevy\s*=\s*"0\.17"',
-                    'bevy = "0.18"',
-                    content
-                )
-                content = re.sub(
-                    r'bevy\s*=\s*\{\s*version\s*=\s*"0\.17"',
-                    'bevy = { version = "0.18"',
-                    content
-                )
+                original_content = content
                 
                 # Update feature names
                 content = content.replace('"animation"', '"gltf_animation"')
@@ -840,8 +828,9 @@ rule:
                 content = content.replace('"bevy_mesh_picking_backend"', '"mesh_picking"')
                 content = content.replace('"documentation"', '"reflect_documentation"')
                 
-                cargo_toml_path.write_text(content, encoding='utf-8')
-                self.logger.info("✓ Updated Cargo.toml to Bevy 0.18")
+                if content != original_content:
+                    cargo_toml_path.write_text(content, encoding='utf-8')
+                    self.logger.info("Updated Cargo.toml feature names for Bevy 0.18")
             
             self.logger.info("=" * 60)
             self.logger.info("Migration to Bevy 0.18 complete!")

@@ -730,10 +730,6 @@ class Migration_0_13_to_0_14(BaseMigration):
         try:
             self.logger.info("Executing post-migration steps for 0.13 -> 0.14")
             
-            # Update Cargo.toml dependencies
-            if not self._update_cargo_dependencies():
-                self.logger.warning("Failed to update Cargo.toml dependencies")
-            
             # Check for patterns that need manual review
             self._check_for_manual_migration_needed()
             
@@ -743,43 +739,7 @@ class Migration_0_13_to_0_14(BaseMigration):
             self.logger.error(f"Post-migration steps failed: {e}", exc_info=True)
             return False
     
-    def _update_cargo_dependencies(self) -> bool:
-        """Update Cargo.toml to use Bevy 0.14"""
-        try:
-            cargo_toml_path = self.project_path / "Cargo.toml"
-            if not cargo_toml_path.exists():
-                self.logger.warning("Cargo.toml not found")
-                return False
-            
-            if self.dry_run:
-                self.logger.info("Would update Cargo.toml to Bevy 0.14 (dry run)")
-                return True
-            
-            content = cargo_toml_path.read_text(encoding='utf-8')
-            
-            # Update bevy dependency version
-            patterns = [
-                (r'(bevy\s*=\s*")[^"]*(")', r'\g<1>0.14\g<2>'),
-                (r'(bevy\s*=\s*\{\s*version\s*=\s*")[^"]*(")', r'\g<1>0.14\g<2>'),
-            ]
-            
-            updated = False
-            for pattern, replacement in patterns:
-                if re.search(pattern, content):
-                    content = re.sub(pattern, replacement, content)
-                    updated = True
-            
-            if updated:
-                cargo_toml_path.write_text(content, encoding='utf-8')
-                self.logger.info("Updated Cargo.toml to Bevy 0.14")
-                return True
-            else:
-                self.logger.warning("Could not find Bevy dependency in Cargo.toml")
-                return False
-                
-        except Exception as e:
-            self.logger.error(f"Failed to update Cargo.toml: {e}", exc_info=True)
-            return False
+
     
     def _check_for_manual_migration_needed(self) -> None:
         """Check for patterns that might need manual migration"""

@@ -845,9 +845,25 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         try:
             self.logger.info("Executing post-migration steps for 0.15 -> 0.16")
             
-            # Update Cargo.toml
-            if not self._update_cargo_toml():
-                self.logger.warning("Failed to update Cargo.toml automatically")
+            # Additional Cargo.toml tweaks for 0.16
+            cargo_toml_path = self.file_manager.find_cargo_toml()
+            if cargo_toml_path:
+                content = cargo_toml_path.read_text(encoding='utf-8')
+                original_content = content
+                
+                # Update edition to 2024 if still on 2021
+                if 'edition = "2021"' in content:
+                    content = content.replace('edition = "2021"', 'edition = "2024"')
+                    self.logger.info("Updated Rust edition to 2024")
+                
+                # Update track_change_detection feature to track_location
+                if 'track_change_detection' in content:
+                    content = content.replace('track_change_detection', 'track_location')
+                    self.logger.info("Updated track_change_detection feature to track_location")
+                
+                if content != original_content:
+                    cargo_toml_path.write_text(content, encoding='utf-8')
+                    self.logger.info("Updated Cargo.toml features and edition for Bevy 0.16")
             
             # Check for manual migration patterns
             self._check_for_manual_migration_needed()
@@ -868,50 +884,7 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
             self.logger.error(f"Post-migration steps failed: {e}", exc_info=True)
             return False
     
-    def _update_cargo_toml(self) -> bool:
-        """Update Cargo.toml to use Bevy 0.16 and Rust 2024"""
-        try:
-            cargo_toml_path = self.file_manager.find_cargo_toml()
-            if not cargo_toml_path:
-                self.logger.warning("Cargo.toml not found")
-                return False
-            
-            content = cargo_toml_path.read_text(encoding='utf-8')
-            original_content = content
-            
-            # Update bevy version
-            content = re.sub(
-                r'(bevy\s*=\s*["\'])0\.15(["\'])',
-                r'\g<1>0.16\g<2>',
-                content
-            )
-            content = re.sub(
-                r'(bevy\s*=\s*\{[^}]*version\s*=\s*["\'])0\.15(["\'])',
-                r'\g<1>0.16\g<2>',
-                content
-            )
-            
-            # Update edition to 2024 if still on 2021
-            if 'edition = "2021"' in content:
-                content = content.replace('edition = "2021"', 'edition = "2024"')
-                self.logger.info("Updated Rust edition to 2024")
-            
-            # Update track_change_detection feature to track_location
-            if 'track_change_detection' in content:
-                content = content.replace('track_change_detection', 'track_location')
-                self.logger.info("Updated track_change_detection feature to track_location")
-            
-            if content != original_content:
-                cargo_toml_path.write_text(content, encoding='utf-8')
-                self.logger.info("Updated Cargo.toml to Bevy 0.16")
-                return True
-            else:
-                self.logger.warning("No Bevy version found in Cargo.toml to update")
-                return False
-                
-        except Exception as e:
-            self.logger.error(f"Failed to update Cargo.toml: {e}", exc_info=True)
-            return False
+
     
     def _check_for_manual_migration_needed(self) -> None:
         """Check for patterns that might need manual migration"""
