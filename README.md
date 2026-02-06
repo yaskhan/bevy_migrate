@@ -352,12 +352,6 @@ transformations.append(self.create_transformation(
     rule_yaml=yaml_rule
 ))
 ```
-    pattern="Res<Input<$T>>",
-    replacement="", # replacement is ignored when callback is present
-    description="Res<Input<T>> -> Res<ButtonInput<T>>",
-    callback=input_callback
-))
-```
 
 ## 🤝 Contributing
 
