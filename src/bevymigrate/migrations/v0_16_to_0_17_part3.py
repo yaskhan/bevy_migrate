@@ -60,9 +60,9 @@ class Migration_0_16_to_0_17_Part3(BaseMigration):
         ))
 
         transformations.append(self.create_transformation(
-            pattern="use bevy::ecs::entity::identifier",
+            pattern="bevy::ecs::entity::identifier",
             replacement="// identifier module removed",
-            description="identifier module removed, functionality in Entity"
+            description="identifier module path removed"
         ))
 
         transformations.append(self.create_transformation(
@@ -197,9 +197,9 @@ class Migration_0_16_to_0_17_Part3(BaseMigration):
         ))
 
         transformations.append(self.create_transformation(
-            pattern="use cosmic_text",
+            pattern="cosmic_text",
             replacement="// cosmic_text re-exports removed, add dependency",
-            description="cosmic_text re-exports removed"
+            description="cosmic_text path change"
         ))
 
         # ===== MESH/MATH CHANGES (5 transformations) =====

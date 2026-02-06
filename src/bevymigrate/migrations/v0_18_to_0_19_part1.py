@@ -209,14 +209,14 @@ rule:
         # Simple renames for individual imports
         for item, mod in reflect_modules.items():
             transformations.append(self.create_transformation(
-                pattern=f"use bevy_reflect::{item};",
-                replacement=f"use bevy_reflect::{mod}::{item};",
-                description=f"{item} moved to bevy_reflect::{mod}"
+                pattern=f"bevy_reflect::{item}",
+                replacement=f"bevy_reflect::{mod}::{item}",
+                description=f"{item} path change to bevy_reflect::{mod}"
             ))
 
         # Braced imports callback
         transformations.append(self.create_transformation(
-            pattern="use bevy_reflect::{ $$$ITEMS };",
+            pattern="use bevy_reflect::{ $$$ITEMS }",
             replacement="",
             description="Streamline braced reflect imports",
             callback=lambda vars, file_path, match: (
@@ -227,9 +227,9 @@ rule:
                     [new_imports.setdefault(reflect_modules.get(i, "root"), []).append(i) for i in items if i],
                     lines := [],
                     [lines.append(f"use bevy_reflect::{mod}::{{{', '.join(its)}}};") if mod != "root" else lines.append(f"use bevy_reflect::{{{', '.join(its)}}};") for mod, its in new_imports.items()],
-                    "\n".join(lines)
-                )[-1]
-            )[-1] if "bevy_reflect" in vars.get("_matched_text", "") else vars.get("_matched_text", "")
+                    "\n".join(lines).strip()
+                ) or ""
+            ) if "bevy_reflect" in vars.get("_matched_text", "") else vars.get("_matched_text", "")
         ))
 
         return transformations

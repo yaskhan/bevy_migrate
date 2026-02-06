@@ -95,9 +95,24 @@ class Migration_0_15_to_0_16(BaseMigration):
         
         # 1. Focus to InputFocus
         transformations.append(self.create_transformation(
-            pattern="use bevy::a11y::Focus",
-            replacement="use bevy::input_focus::InputFocus",
-            description="Replace bevy::a11y::Focus with bevy::input_focus::InputFocus"
+            pattern="bevy::a11y::Focus",
+            replacement="bevy::input_focus::InputFocus",
+            description="Replace Focus path"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="a11y::Focus",
+            replacement="input_focus::InputFocus",
+            description="Replace Focus sub-path"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="bevy::a11y",
+            replacement="bevy::input_focus",
+            description="Replace a11y module path"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="a11y",
+            replacement="input_focus",
+            description="Replace a11y module (context-sensitive)"
         ))
         
         transformations.append(self.create_transformation(
@@ -230,9 +245,19 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 16. Parent renamed to ChildOf
         transformations.append(self.create_transformation(
-            pattern="use bevy::hierarchy::Parent",
-            replacement="use bevy::hierarchy::ChildOf",
+            pattern="bevy::hierarchy::Parent",
+            replacement="bevy::hierarchy::ChildOf",
             description="Parent component renamed to ChildOf"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="hierarchy::Parent",
+            replacement="hierarchy::ChildOf",
+            description="Parent component sub-path renamed"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="bevy_hierarchy::Parent",
+            replacement="bevy_hierarchy::ChildOf",
+            description="Parent component crate-path renamed"
         ))
         
         transformations.append(self.create_transformation(
@@ -411,8 +436,8 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 36. NonSendMarker no longer needs Option<NonSend<_>>
         transformations.append(self.create_transformation(
-            pattern="use bevy::core::NonSendMarker",
-            replacement="use bevy::ecs::system::NonSendMarker",
+            pattern="bevy::core::NonSendMarker",
+            replacement="bevy::ecs::system::NonSendMarker",
             description="NonSendMarker moved to bevy::ecs::system"
         ))
         
@@ -553,14 +578,14 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 48. Anti-aliasing imports moved
         transformations.append(self.create_transformation(
-            pattern="use bevy::core_pipeline::fxaa",
-            replacement="use bevy::anti_aliasing::fxaa",
+            pattern="bevy::core_pipeline::fxaa",
+            replacement="bevy::anti_aliasing::fxaa",
             description="Anti-aliasing moved to bevy::anti_aliasing"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::core_pipeline::smaa",
-            replacement="use bevy::anti_aliasing::smaa",
+            pattern="bevy::core_pipeline::smaa",
+            replacement="bevy::anti_aliasing::smaa",
             description="SMAA moved to bevy::anti_aliasing"
         ))
         
@@ -612,15 +637,25 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 53. TextureAtlas moved to bevy_image
         transformations.append(self.create_transformation(
-            pattern="use bevy::sprite::TextureAtlas",
-            replacement="use bevy::image::TextureAtlas",
-            description="TextureAtlas moved from bevy_sprite to bevy_image"
+            pattern="bevy::sprite::TextureAtlas",
+            replacement="bevy::image::TextureAtlas",
+            description="TextureAtlas path change"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="sprite::TextureAtlas",
+            replacement="image::TextureAtlas",
+            description="TextureAtlas sub-path change"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::sprite::TextureAtlasLayout",
-            replacement="use bevy::image::TextureAtlasLayout",
-            description="TextureAtlasLayout moved to bevy_image"
+            pattern="bevy::sprite::TextureAtlasLayout",
+            replacement="bevy::image::TextureAtlasLayout",
+            description="TextureAtlasLayout path change"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="sprite::TextureAtlasLayout",
+            replacement="image::TextureAtlasLayout",
+            description="TextureAtlasLayout sub-path change"
         ))
         
         # 54. RenderTarget::Image signature change
@@ -695,67 +730,82 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 63. HashMap moved to bevy_platform
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::HashMap",
-            replacement="use bevy::platform::collections::HashMap",
-            description="HashMap moved to bevy::platform::collections"
+            pattern="bevy::utils::HashMap",
+            replacement="bevy::platform::collections::HashMap",
+            description="HashMap path change"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="utils::HashMap",
+            replacement="platform::collections::HashMap",
+            description="HashMap sub-path change"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy_utils::HashMap",
-            replacement="use bevy_platform::collections::HashMap",
-            description="HashMap moved to bevy_platform::collections"
+            pattern="bevy_utils::HashMap",
+            replacement="bevy_platform::collections::HashMap",
+            description="HashMap crate-path change"
         ))
         
         # 64. HashSet moved
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::HashSet",
-            replacement="use bevy::platform::collections::HashSet",
-            description="HashSet moved to bevy::platform::collections"
+            pattern="bevy::utils::HashSet",
+            replacement="bevy::platform::collections::HashSet",
+            description="HashSet path change"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="utils::HashSet",
+            replacement="platform::collections::HashSet",
+            description="HashSet sub-path change"
         ))
         
         # 65. EntityHash* moved to bevy_ecs
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::EntityHash",
-            replacement="use bevy::ecs::entity::EntityHash",
+            pattern="bevy::utils::EntityHash",
+            replacement="bevy::ecs::entity::EntityHash",
             description="EntityHash moved to bevy::ecs::entity"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::EntityHashMap",
-            replacement="use bevy::ecs::entity::EntityHashMap",
+            pattern="bevy::utils::EntityHashMap",
+            replacement="bevy::ecs::entity::EntityHashMap",
             description="EntityHashMap moved to bevy::ecs::entity"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::EntityHashSet",
-            replacement="use bevy::ecs::entity::EntityHashSet",
+            pattern="bevy::utils::EntityHashSet",
+            replacement="bevy::ecs::entity::EntityHashSet",
             description="EntityHashSet moved to bevy::ecs::entity"
         ))
         
         # 66. Instant moved to bevy_platform
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::Instant",
-            replacement="use bevy::platform::time::Instant",
-            description="Instant moved to bevy::platform::time"
+            pattern="bevy::utils::Instant",
+            replacement="bevy::platform::time::Instant",
+            description="Instant path change"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="utils::Instant",
+            replacement="platform::time::Instant",
+            description="Instant sub-path change"
         ))
         
         # 67. Logging macros moved to bevy_log
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::info",
-            replacement="use bevy::log::info",
+            pattern="bevy::utils::info",
+            replacement="bevy::log::info",
             description="Logging macros moved to bevy::log"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::warn",
-            replacement="use bevy::log::warn",
+            pattern="bevy::utils::warn",
+            replacement="bevy::log::warn",
             description="warn macro moved to bevy::log"
         ))
         
         # 68. BoxedFuture moved to bevy_tasks
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::BoxedFuture",
-            replacement="use bevy::tasks::BoxedFuture",
+            pattern="bevy::utils::BoxedFuture",
+            replacement="bevy::tasks::BoxedFuture",
             description="BoxedFuture moved to bevy::tasks"
         ))
         
@@ -772,28 +822,33 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         
         # 70. FrameCount moved to bevy_diagnostic
         transformations.append(self.create_transformation(
-            pattern="use bevy::core::FrameCount",
-            replacement="use bevy::diagnostic::FrameCount",
+            pattern="bevy::core::FrameCount",
+            replacement="bevy::diagnostic::FrameCount",
             description="FrameCount moved to bevy::diagnostic"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy_core::FrameCount",
-            replacement="use bevy_diagnostic::FrameCount",
+            pattern="bevy_core::FrameCount",
+            replacement="bevy_diagnostic::FrameCount",
             description="FrameCount moved to bevy_diagnostic"
         ))
         
         # 71. Name moved to bevy_ecs
         transformations.append(self.create_transformation(
-            pattern="use bevy::core::Name",
-            replacement="use bevy::ecs::name::Name",
-            description="Name moved to bevy::ecs::name"
+            pattern="bevy::core::Name",
+            replacement="bevy::ecs::name::Name",
+            description="Name path change"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="core::Name",
+            replacement="ecs::name::Name",
+            description="Name sub-path change"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy_core::Name",
-            replacement="use bevy_ecs::name::Name",
-            description="Name moved to bevy_ecs::name"
+            pattern="bevy_core::Name",
+            replacement="bevy_ecs::name::Name",
+            description="Name crate-path change"
         ))
         
         # 72. TaskPoolOptions moved to bevy_app

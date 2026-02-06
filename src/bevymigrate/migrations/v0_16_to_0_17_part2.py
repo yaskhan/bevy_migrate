@@ -161,48 +161,48 @@ class Migration_0_16_to_0_17_Part2(BaseMigration):
         ))
 
         transformations.append(self.create_transformation(
-            pattern="use bevy::core_pipeline::experimental::taa",
-            replacement="use bevy::anti_alias::taa",
-            description="TAA no longer experimental, moved to bevy_anti_alias"
+            pattern="bevy::core_pipeline::taa",
+            replacement="bevy::anti_alias::taa",
+            description="TAA path change"
         ))
 
         # Post-processing moved to bevy_post_process
         transformations.append(self.create_transformation(
-            pattern="use bevy::core_pipeline::bloom",
-            replacement="use bevy::post_process::bloom",
-            description="Bloom moved to bevy_post_process"
+            pattern="bevy::core_pipeline::bloom",
+            replacement="bevy::post_process::bloom",
+            description="Bloom path change"
         ))
 
         transformations.append(self.create_transformation(
-            pattern="use bevy::core_pipeline::tonemapping",
-            replacement="use bevy::post_process::tonemapping",
-            description="Tonemapping moved to bevy_post_process"
+            pattern="bevy::core_pipeline::tonemapping",
+            replacement="bevy::post_process::tonemapping",
+            description="Tonemapping path change"
         ))
 
         # Text2d moved to bevy_sprite
         transformations.append(self.create_transformation(
-            pattern="use bevy::text::Text2d",
-            replacement="use bevy::sprite::Text2d",
-            description="Text2d moved to bevy_sprite"
+            pattern="bevy::text::Text2d",
+            replacement="bevy::sprite::Text2d",
+            description="Text2d path change"
         ))
 
         transformations.append(self.create_transformation(
-            pattern="use bevy_text::Text2d",
-            replacement="use bevy_sprite::Text2d",
-            description="Text2d moved to bevy_sprite crate"
+            pattern="bevy_text::Text2d",
+            replacement="bevy_sprite::Text2d",
+            description="Text2d path change"
         ))
 
         # Platform types moved
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::SyncCell",
-            replacement="use bevy::platform::cell::SyncCell",
-            description="SyncCell moved to bevy_platform"
+            pattern="bevy::utils::SyncCell",
+            replacement="bevy::platform::cell::SyncCell",
+            description="SyncCell path change"
         ))
 
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::SyncUnsafeCell",
-            replacement="use bevy::platform::cell::SyncUnsafeCell",
-            description="SyncUnsafeCell moved to bevy_platform"
+            pattern="bevy::utils::SyncUnsafeCell",
+            replacement="bevy::platform::cell::SyncUnsafeCell",
+            description="SyncUnsafeCell path change"
         ))
 
         # ===== SYSTEM SET RENAMES (20 transformations) =====

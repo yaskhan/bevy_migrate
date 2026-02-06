@@ -133,9 +133,14 @@ class Migration_0_14_to_0_15_Part1(BaseMigration):
         
         # 9. DebugName to NameOrEntity
         transformations.append(self.create_transformation(
-            pattern="use bevy::core::name::DebugName",
-            replacement="use bevy::core::name::NameOrEntity",
-            description="Rename DebugName to NameOrEntity"
+            pattern="bevy::core::name::DebugName",
+            replacement="bevy::core::name::NameOrEntity",
+            description="Rename DebugName path"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="core::name::DebugName",
+            replacement="core::name::NameOrEntity",
+            description="Rename DebugName sub-path"
         ))
         
         transformations.append(self.create_transformation(
@@ -374,15 +379,20 @@ class Migration_0_14_to_0_15_Part1(BaseMigration):
         
         # 30. ShortName import move
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::ShortName",
-            replacement="use bevy::reflect::ShortName",
-            description="Move ShortName to bevy::reflect"
+            pattern="bevy::utils::ShortName",
+            replacement="bevy::reflect::ShortName",
+            description="Move ShortName path to bevy::reflect"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="utils::ShortName",
+            replacement="reflect::ShortName",
+            description="Move ShortName sub-path to reflect"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy_utils::ShortName",
-            replacement="use bevy_reflect::ShortName",
-            description="Move ShortName to bevy_reflect"
+            pattern="bevy_utils::ShortName",
+            replacement="bevy_reflect::ShortName",
+            description="Move ShortName path to bevy_reflect"
         ))
         
         # 31. DynamicArray::from_vec to from_iter
@@ -581,21 +591,26 @@ class Migration_0_14_to_0_15_Part1(BaseMigration):
         
         # 45. EntityHash imports move
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::EntityHash",
-            replacement="use bevy::ecs::entity::EntityHash",
-            description="Move EntityHash to bevy::ecs::entity"
+            pattern="bevy::utils::EntityHash",
+            replacement="bevy::ecs::entity::EntityHash",
+            description="Move EntityHash path to bevy::ecs::entity"
+        ))
+        transformations.append(self.create_transformation(
+            pattern="utils::EntityHash",
+            replacement="ecs::entity::EntityHash",
+            description="Move EntityHash sub-path to ecs::entity"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::EntityHashMap",
-            replacement="use bevy::ecs::entity::EntityHashMap",
-            description="Move EntityHashMap to bevy::ecs::entity"
+            pattern="bevy::utils::EntityHashMap",
+            replacement="bevy::ecs::entity::EntityHashMap",
+            description="Move EntityHashMap path to bevy::ecs::entity"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="use bevy::utils::EntityHashSet",
-            replacement="use bevy::ecs::entity::EntityHashSet",
-            description="Move EntityHashSet to bevy::ecs::entity"
+            pattern="bevy::utils::EntityHashSet",
+            replacement="bevy::ecs::entity::EntityHashSet",
+            description="Move EntityHashSet path to bevy::ecs::entity"
         ))
         
         # 46. get_short_name to ShortName wrapper
@@ -609,9 +624,9 @@ class Migration_0_14_to_0_15_Part1(BaseMigration):
         
         # 47. ANDROID_APP move
         transformations.append(self.create_transformation(
-            pattern="use bevy::winit::ANDROID_APP",
-            replacement="use bevy::window::ANDROID_APP",
-            description="Move ANDROID_APP to bevy::window"
+            pattern="bevy::winit::ANDROID_APP",
+            replacement="bevy::window::ANDROID_APP",
+            description="Move ANDROID_APP path to bevy::window"
         ))
         
         return transformations

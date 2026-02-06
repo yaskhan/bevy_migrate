@@ -418,6 +418,32 @@ class Migration_0_12_to_0_13(BaseMigration):
                 description=f"Update KeyCode: {old_key} to {new_key}"
             ))
         
+        # Make import transformations robust against nested imports.
+        reflect_modules = {
+            "ReflectComponent": "component",
+            "ReflectResource": "resource",
+            "ReflectAsset": "asset",
+            "ReflectFromPtr": "from_ptr",
+            "ReflectPath": "path",
+            "ReflectMap": "map",
+            "ReflectTuple": "tuple",
+            "ReflectStruct": "struct",
+            "ReflectEnum": "enum",
+            "ReflectList": "list",
+            "ReflectArray": "array",
+            "ReflectAtomic": "atomic",
+            "ReflectTupleStruct": "tuple_struct",
+            "ReflectOpaque": "opaque",
+            "Reflect": "reflect",
+        }
+        
+        for item, mod in reflect_modules.items():
+            transformations.append(self.create_transformation(
+                pattern=f"bevy_reflect::{item}",
+                replacement=f"bevy_reflect::{mod}::{item}",
+                description=f"{item} path change to bevy_reflect::{mod}"
+            ))
+        
         # 26. WindowMoved entity to window
         transformations.append(self.create_transformation(
             pattern="$EVENT.entity",
@@ -431,7 +457,7 @@ class Migration_0_12_to_0_13(BaseMigration):
         transformations.append(self.create_transformation(
             pattern="bevy::utils::EntityHash",
             replacement="bevy::ecs::entity::hash::EntityHash",
-            description="Update EntityHash import to bevy_ecs"
+            description="Update EntityHash path to bevy_ecs"
         ))
         
         transformations.append(self.create_transformation(
@@ -470,13 +496,13 @@ class Migration_0_12_to_0_13(BaseMigration):
         transformations.append(self.create_transformation(
             pattern="bevy::render::view::NonSendMarker",
             replacement="bevy::core::NonSendMarker",
-            description="Update NonSendMarker import to bevy_core"
+            description="Update NonSendMarker path to bevy_core"
         ))
         
         transformations.append(self.create_transformation(
             pattern="bevy::render::view::window::NonSendMarker",
             replacement="bevy::core::NonSendMarker",
-            description="Update window::NonSendMarker import to bevy_core"
+            description="Update window::NonSendMarker path to bevy_core"
         ))
         
         # 31. futures_lite re-export
