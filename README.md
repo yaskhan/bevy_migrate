@@ -1,14 +1,14 @@
 # Bevy Engine Migration Tool
 
-Automated migration tool for Bevy Engine projects between versions 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, and 0.18.
+Automated migration tool for Bevy Engine projects between versions 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, and 0.19.
 
 ## 📋 Description
 
-This tool automates the migration process for projects using the Bevy game engine between different versions. It supports migrations from version 0.12 to 0.18 using a modular architecture and AST code analysis.
+This tool automates the migration process for projects using the Bevy game engine between different versions. It supports migrations from version 0.12 to 0.19 using a modular architecture and AST code analysis.
 
 ### Key Features
 
-- 🔄 **Automatic migration** between Bevy versions 0.12 → 0.13 → 0.14 → 0.15 → 0.16 → 0.17 → 0.18
+- 🔄 **Automatic migration** between Bevy versions 0.12 → 0.13 → 0.14 → 0.15 → 0.16 → 0.17 → 0.18 → 0.19
 - 🧩 **Modular architecture** with separate modules for each version
 - 🔍 **AST analysis** using ast-grep for precise code transformations
 - 📁 **Smart file management** with automatic backups
@@ -24,6 +24,7 @@ This tool automates the migration process for projects using the Bevy game engin
 - **0.15 → 0.16**: Plugin system updates, system registration, entity creation improvements (72 transformations)
 - **0.16 → 0.17**: Required components system, observer updates, input system changes (130+ transformations in 3 parts)
 - **0.17 → 0.18**: Rendering improvements, UI system, window system, new features (105+ transformations)
+- **0.18 → 0.19 (Part 1)**: Messages API, observer renames, reflect reorganization, and core renames (Manual target only)
 
 ## 🛠️ Installation
 
@@ -52,6 +53,9 @@ After installation, you can run the tool directly using the `bevymigrate` comman
 ```bash
 # Run migration on your project (0.18 is default target)
 bevymigrate /path/to/bevy/project
+
+# Migrate to Bevy 0.19 (Part 1) explicitly
+bevymigrate /path/to/bevy/project --target-version 0.19-part1
 
 # Run a dry-run to see what would change
 bevymigrate /path/to/bevy/project --dry-run
@@ -174,7 +178,8 @@ src/
 │   ├── v0_16_to_0_17_part1.py # Migration 0.16 → 0.17 Part 1 (Event/Message split)
 │   ├── v0_16_to_0_17_part2.py # Migration 0.16 → 0.17 Part 2 (bevy_render reorganization)
 │   ├── v0_16_to_0_17_part3.py # Migration 0.16 → 0.17 Part 3 (Entity representation)
-│   └── v0_17_to_0_18.py       # Migration 0.17 → 0.18 (105+ transformations)
+│   ├── v0_17_to_0_18.py       # Migration 0.17 → 0.18 (105+ transformations)
+│   └── v0_18_to_0_19_part1.py # Migration 0.18 → 0.19 Part 1 (Core API renames)
 ├── utils/                      # Utilities
 │   └── version_detector.py     # Version detection
 └── config/                     # Configuration
@@ -199,7 +204,8 @@ src/
 | 0.15→0.16 | 72 | 1 | 70+ |
 | 0.16→0.17 | 130+ | 3 | 150+ |
 | 0.17→0.18 | 105+ | 1 | 80+ |
-| **Total** | **485+** | **9** | **480+** |
+| 0.18→0.19 | 50+ | 1 | 50+ |
+| **Total** | **535+** | **10** | **530+** |
 
 ## 🔧 Configuration
 

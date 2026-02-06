@@ -19,6 +19,7 @@ from bevymigrate.migrations.v0_16_to_0_17_part1 import Migration_0_16_to_0_17_Pa
 from bevymigrate.migrations.v0_16_to_0_17_part2 import Migration_0_16_to_0_17_Part2
 from bevymigrate.migrations.v0_16_to_0_17_part3 import Migration_0_16_to_0_17_Part3
 from bevymigrate.migrations.v0_17_to_0_18 import Migration_0_17_to_0_18
+from bevymigrate.migrations.v0_18_to_0_19_part1 import Migration_0_18_to_0_19_Part1
 from bevymigrate.core.file_manager import FileManager
 from bevymigrate.utils.version_detector import VersionDetector
 
@@ -64,6 +65,7 @@ class MigrationEngine:
             "0.17-part1->0.17-part2": Migration_0_16_to_0_17_Part2,
             "0.17-part2->0.17": Migration_0_16_to_0_17_Part3,
             "0.17->0.18": Migration_0_17_to_0_18,
+            "0.18->0.19-part1": Migration_0_18_to_0_19_Part1,
         }
         
         # Version progression mapping
@@ -76,7 +78,8 @@ class MigrationEngine:
             "0.16": "0.17-part1",
             "0.17-part1": "0.17-part2",
             "0.17-part2": "0.17",
-            "0.17": "0.18"
+            "0.17": "0.18",
+            "0.18": "0.19-part1"
         }
         
         self.logger.info(f"Migration engine initialized for project: {project_path}")
@@ -134,7 +137,7 @@ class MigrationEngine:
     
     def _validate_versions(self, from_version: str, to_version: str) -> bool:
         """Validate that the version migration is supported"""
-        supported_versions = ["0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"]
+        supported_versions = ["0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18", "0.19-part1"]
         
         if from_version not in supported_versions:
             self.logger.error(f"Unsupported source version: {from_version}")
