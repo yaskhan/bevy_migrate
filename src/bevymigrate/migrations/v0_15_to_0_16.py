@@ -645,16 +645,15 @@ fix: "EaseFunction::Steps($N, JumpAt::default())"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="UiImage {",
-            replacement="ImageNode {",
-            description="UiImage struct renamed to ImageNode"
+            pattern="UiImage { $$$PRE, texture: $VAL, $$$POST }",
+            replacement="ImageNode { $$$PRE, image: $VAL, $$$POST }",
+            description="UiImage renamed to ImageNode and texture field renamed to image"
         ))
-        
-        # 57. UiImage::texture renamed to image
+
         transformations.append(self.create_transformation(
-            pattern="texture: $IMAGE",
-            replacement="image: $IMAGE",
-            description="UiImage::texture field renamed to image"
+            pattern="UiImage { $$$ }",
+            replacement="ImageNode { $$$ }",
+            description="UiImage renamed to ImageNode"
         ))
         
         # 58. TextureAtlas into UiImage

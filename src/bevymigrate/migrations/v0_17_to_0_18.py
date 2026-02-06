@@ -6,7 +6,7 @@ Comprehensive migration covering 80+ breaking changes
 import logging
 import re
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from bevymigrate.migrations.base_migration import BaseMigration, MigrationResult
 from bevymigrate.core.ast_processor import ASTTransformation
@@ -60,6 +60,12 @@ class Migration_0_17_to_0_18(BaseMigration):
                 
                 return f"({id_val}, AnimatedBy({player_val}))"
             return full
+
+        def image_render_target_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
+            full = vars.get("_matched_text", "")
+            # Remove FloatOrd wrapper specifically for scale_factor field
+            # This is safer than a global string replacement
+            return re.sub(r"(scale_factor:\s*)FloatOrd\(([^)]+)\)", r"\1\2", full)
 
         def render_target_callback(vars: Dict[str, str], file_path: Path, match: Dict[str, Any]) -> str:
             full = vars.get("_matched_text", "")
@@ -366,15 +372,16 @@ class Migration_0_17_to_0_18(BaseMigration):
         ))
         
         transformations.append(self.create_transformation(
-            pattern="ExtractedUiNode { stack_index:",
-            replacement="ExtractedUiNode { z_order:",
+            pattern="ExtractedUiNode { $$$PRE, stack_index: $VAL, $$$POST }",
+            replacement="ExtractedUiNode { $$$PRE, z_order: $VAL, $$$POST }",
             description="stack_index → z_order (now f32)"
         ))
         
         transformations.append(self.create_transformation(
-            pattern="ImageRenderTarget { scale_factor: FloatOrd(",
-            replacement="ImageRenderTarget { scale_factor:",
-            description="scale_factor is now f32, no FloatOrd wrapper"
+            pattern="ImageRenderTarget { $$$ }",
+            replacement="",
+            description="scale_factor is now f32, no FloatOrd wrapper",
+            callback=image_render_target_callback
         ))
         
         # Atmosphere changes
@@ -385,8 +392,8 @@ class Migration_0_17_to_0_18(BaseMigration):
         ))
         
         transformations.append(self.create_transformation(
-            pattern="MaterialPlugin { prepass_enabled:",
-            replacement="// Use Material::enable_prepass() method instead",
+            pattern="MaterialPlugin { $$$PRE, prepass_enabled: $VAL, $$$POST }",
+            replacement="MaterialPlugin { $$$PRE, /* prepass_enabled: $VAL moved to Material::enable_prepass() */ $$$POST }",
             description="MaterialPlugin fields moved to Material methods"
         ))
         
@@ -701,8 +708,8 @@ rule:
         # ===== COMPONENT DESCRIPTOR CHANGES (1 transformation) =====
         
         transformations.append(self.create_transformation(
-            pattern="ComponentDescriptor::new_with_layout(",
-            replacement="ComponentDescriptor::new_with_layout( // Requires relationship_accessor param",
+            pattern="ComponentDescriptor::new_with_layout($$$ARGS)",
+            replacement="ComponentDescriptor::new_with_layout($$$ARGS /* Requires relationship_accessor param */)",
             description="ComponentDescriptor requires relationship_accessor"
         ))
         

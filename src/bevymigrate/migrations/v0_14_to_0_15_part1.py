@@ -545,8 +545,8 @@ class Migration_0_14_to_0_15_Part1(BaseMigration):
         
         # 41. Style to Node for layout properties  
         transformations.append(self.create_transformation(
-            pattern="Style {",
-            replacement="Node {",
+            pattern="Style { $$$ }",
+            replacement="Node { $$$ }",
             description="Rename Style to Node for layout properties"
         ))
         

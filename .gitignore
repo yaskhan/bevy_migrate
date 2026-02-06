@@ -134,3 +134,4 @@ dmypy.json
 migration_backup/
 *.bak
 *.tmp
+/.agent

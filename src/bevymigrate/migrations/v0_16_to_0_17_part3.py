@@ -112,8 +112,8 @@ class Migration_0_16_to_0_17_Part3(BaseMigration):
         ))
 
         transformations.append(self.create_transformation(
-            pattern="WindowPlugin { primary_window:",
-            replacement="WindowPlugin { primary_cursor_options:",
+            pattern="WindowPlugin { $$$PRE, primary_window: $VAL, $$$POST }",
+            replacement="WindowPlugin { $$$PRE, primary_cursor_options: $VAL, $$$POST }",
             description="WindowPlugin::primary_window → primary_cursor_options"
         ))
 
